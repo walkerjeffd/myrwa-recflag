@@ -1,0 +1,54 @@
+{
+  "name": "recflag",
+  "version": "0.0.1",
+  "description": "MyRWA Recreational Flagging Website",
+  "author": "Jeff Walker <jeff@walkerenvres.com>",
+  "main": "index.js",
+  "scripts": {
+    "watchify": "NODE_ENV=development watchify -vd -g browserify-css -e src/main.js -o dist/build-dev.js",
+    "serve": "http-server -o -s -c 1 -a localhost",
+    "dev": "npm-run-all --parallel watchify serve",
+    "build": "NODE_ENV=production browserify -g envify -g browserify-css src/main.js | uglifyjs -c warnings=false -m > dist/build-tmp.js && mv dist/build-tmp.js dist/build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/walkerjeffd/myrwa-recflag.git"
+  },
+  "private": true,
+  "dependencies": {
+    "blueimp-tmpl": "^3.11.0",
+    "leaflet": "^1.2.0",
+    "leaflet-providers": "^1.1.17",
+    "leaflet-sidebar": "^0.2.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.0.0",
+    "babel-preset-env": "^1.6.0",
+    "babelify": "^7.2.0",
+    "browserify": "^13.0.1",
+    "browserify-css": "^0.10.0",
+    "cross-env": "^1.0.6",
+    "envify": "^3.4.1",
+    "http-server": "^0.9.0",
+    "npm-run-all": "^2.1.2",
+    "uglify-js": "^2.5.0",
+    "watchify": "^3.4.0"
+  },
+  "browserify": {
+    "transform": [
+      "babelify",
+      "envify",
+      "browserify-css"
+    ]
+  },
+  "browserify-css": {
+    "autoInject": true,
+    "minify": true,
+    "rootDir": "../"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/walkerjeffd/myrwa-recflag/issues"
+  },
+  "homepage": "https://github.com/walkerjeffd/myrwa-recflag#readme"
+}

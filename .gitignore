@@ -4,3 +4,4 @@ config/*.js
 !config/index.template.js
 
 r/*.png
+r/.Rhistory

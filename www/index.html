@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Recreational Flagging</title>
+  <style>
+    #dev-container {
+      max-width: 1012px;
+      margin: auto;
+    }
+
+    /* INJECT TO SQUARESPACE HEADER */
+
+    .leaflet-sidebar .close {
+      z-index: 800 !important;
+    }
+
+    #recflag-map {
+      width: 100%;
+      height: 600px;
+    }
+
+    /* END INJECTION */
+  </style>
+</head>
+<body>
+
+<div id="dev-container">
+  <div>
+    <h1>Recreational Flagging</h1>
+  </div>
+  <!-- INJECT TO SQUARESPACE CODE BLOCK -->
+  <div id="recflag-sidebar"></div>
+  <div id="recflag-map"></div>
+  <!-- END INJECTION -->
+</div>
+
+<script src="dist/build-dev.js"></script>
+
+</body>
+</html>

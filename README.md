@@ -52,3 +52,13 @@ node fetch.js darksky -D 5
 ```
 
 ## Web Applications
+
+### Map
+
+Marker Icon: https://www.iconfinder.com/icons/299087/map_marker_icon
+
+```sh
+npm run serve
+npm run dev
+npm run build
+```
