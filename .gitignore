@@ -3,5 +3,8 @@ node_modules/
 config/*.js
 !config/index.template.js
 
+apps/config/*.js
+!apps/config/index.template.js
+
 r/*.png
 r/.Rhistory

@@ -9,6 +9,8 @@ require('leaflet-sidebar');
 require('leaflet/dist/leaflet.css');
 require('leaflet-sidebar/src/L.Control.Sidebar.css');
 
+const config = require('../../config');
+
 const sidebarTemplate = `
 <h1>{%=o.description%}</h1>
 <p>
@@ -20,25 +22,25 @@ const sidebarTemplate = `
 
 const icons = {
   green: L.icon({
-    iconUrl: 'dist/img/marker-green-2x.png',
+    iconUrl: `${config.api.url}static/map/img/marker-green-2x.png`,
     iconSize: [64, 64],    // size of the icon
     iconAnchor: [32, 64],  // point of the icon which will correspond to marker's location
     popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
   }),
   yellow: L.icon({
-    iconUrl: 'dist/img/marker-yellow-2x.png',
+    iconUrl: `${config.api.url}static/map/img/marker-yellow-2x.png`,
     iconSize: [64, 64],
     iconAnchor: [32, 64],
     popupAnchor: [-3, -76]
   }),
   red: L.icon({
-    iconUrl: 'dist/img/marker-red-2x.png',
+    iconUrl: `${config.api.url}static/map/img/marker-red-2x.png`,
     iconSize: [64, 64],
     iconAnchor: [32, 64],
     popupAnchor: [-3, -76]
   }),
   gray: L.icon({
-    iconUrl: 'dist/img/marker-gray-2x.png',
+    iconUrl: `${config.api.url}static/map/img/marker-gray-2x.png`,
     iconSize: [64, 64],
     iconAnchor: [32, 64],
     popupAnchor: [-3, -76]
