@@ -22,3 +22,10 @@ CREATE TABLE darksky (
   values JSON
 );
 
+CREATE TABLE wunderground (
+  id SERIAL PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  date DATE,
+  data JSON
+);
+

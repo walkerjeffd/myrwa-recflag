@@ -2,6 +2,7 @@ const logger = require('./logger');
 const program = require('commander');
 const fetchStreamflow = require('./streamflow').fetch;
 const fetchDarkSky = require('./darksky').fetch;
+const fetchWunderground = require('./wunderground').fetch;
 
 // main program ---------------------------------------------------------------
 const startTime = new Date();
@@ -34,6 +35,24 @@ program
   .action((command) => {
     logger.info('fetching darksky');
     fetchDarkSky({ days: command.days })
+      .then(() => {
+        const endTime = new Date();
+        logger.info('done (duration = %d sec)', (endTime - startTime) / 1000);
+        process.exit(0);
+      })
+      .catch((error) => {
+        logger.error(error.toString());
+        process.exit(1);
+      });
+  });
+
+program
+  .command('wunderground')
+  .description('Fetch hourly weather data from Wunderground API and save new data to database')
+  .option('-D, --date [YYYY-MM-DD]', 'Date to fetch')
+  .action((command) => {
+    logger.info('fetching darksky');
+    fetchWunderground({ date: command.date })
       .then(() => {
         const endTime = new Date();
         logger.info('done (duration = %d sec)', (endTime - startTime) / 1000);

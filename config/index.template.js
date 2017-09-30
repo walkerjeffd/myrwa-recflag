@@ -14,6 +14,13 @@ module.exports = {
       longitude: -71.106667
     }
   },
+  wunderground: {
+    key: '',
+    history: {
+      start: '2010-01-01',
+      end: '2016-12-31'
+    }
+  },
   api: {
     port: 8000,
     logFile: '/path/to/api-access.log'
