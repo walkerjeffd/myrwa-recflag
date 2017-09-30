@@ -11,7 +11,7 @@ const range = moment.range(config.wunderground.history.start, config.wundergroun
 
 const dateArray = Array.from(range.by('day')).map(d => d.format('YYYY-MM-DD'));
 
-const delay = 3 * 60 * 10000; // 3 minutes
+const delay = config.wunderground.history.delay;
 
 function run(i) {
   if (i < 0) {

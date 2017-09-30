@@ -18,7 +18,8 @@ module.exports = {
     key: '',
     history: {
       start: '2010-01-01',
-      end: '2016-12-31'
+      end: '2016-12-31',
+      delay: 3 * 60 * 10000 // 3 min
     }
   },
   api: {
