@@ -12,12 +12,17 @@ require('leaflet-sidebar/src/L.Control.Sidebar.css');
 const config = require('../../config');
 
 const sidebarTemplate = `
-<h1>{%=o.description%}</h1>
+<h2>{%=o.description%}</h2>
 <p>
   Risk Level: {%=o.risk%}<br>
   Reason: {%=o.reason%}<br>
   Recreation: {%=o.standard%}
 </p>
+<h4>Risk History</h4>
+<img src="${config.api.url}static/map/img/risk-timeseries.png" width=400 height=50></img>
+<p>Risk levels over the past 5 days</p>
+<h4>Station Photo</h4>
+<img src="${config.api.url}static/map/img/stn-image.png" width=400 height=250></img>
 `;
 
 const icons = {
