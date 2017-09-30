@@ -12,7 +12,7 @@ require('leaflet-sidebar/src/L.Control.Sidebar.css');
 const config = require('../../config');
 
 const sidebarTemplate = `
-<h2>{%=o.description%}</h2>
+<h3>{%=o.description%}</h3>
 <p>
   Risk Level: {%=o.risk%}<br>
   Reason: {%=o.reason%}<br>
@@ -158,10 +158,14 @@ window.onload = () => {
     L.marker([site.latitude, site.longitude], { icon }).addTo(map)
       .on('click', () => {
         console.log('clicked: ', site);
-        sidebar.setContent(tmpl(sidebarTemplate, site));
-        if (!sidebar.isVisible()) {
-          sidebar.show();
+        if (sidebar.isVisible()) {
+          sidebar.hide();
         }
+
+        setTimeout(() => {
+          sidebar.setContent(tmpl(sidebarTemplate, site));
+          sidebar.show();
+        }, 200);
       });
   });
 };
