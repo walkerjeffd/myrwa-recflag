@@ -28,8 +28,9 @@ function run(i) {
         run(i - 1);
       }, delay);
     })
-    .catch(() => {
+    .catch((err) => {
       logger.error(`error occurred for "${date}"`);
+      logger.error(err);
       process.exit(1);
     });
 }
