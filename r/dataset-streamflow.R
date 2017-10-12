@@ -4,50 +4,53 @@ library(dataRetrieval)
 
 rm(list = ls())
 
+START <- "2005-01-01"
+END <- "2016-12-31"
 
 # hourly aberjona ---------------------------------------------------------
+# # # missing too much data (most of 2015)
 
-df_abj_uv_raw <- readNWISuv(siteNumbers = "01102500", parameterCd = "00060", startDate = "2010-01-01", endDate = "2016-12-31")
+# df_abj_uv_raw <- readNWISuv(siteNumbers = "01102500", parameterCd = "00060", startDate = "2010-01-01", endDate = "2016-12-31")
+#
+# df_abj_uv <- df_abj_uv_raw %>%
+#   select(
+#     site_no,
+#     timestamp = dateTime,
+#     flow = X_00060_00000
+#   ) %>%
+#   mutate(
+#     site = "aberjona",
+#     timestamp = with_tz(timestamp, tzone = "US/Eastern")
+#   )
+#
+# df_abj_hr <- df_abj_uv %>%
+#   mutate(
+#     timestamp = ceiling_date(timestamp, unit = "hour")
+#   ) %>%
+#   group_by(timestamp) %>%
+#   summarize(
+#     flow = mean(flow)
+#   )
+# # summary(df_abj_hr)
+#
+# df_abj_hr <- data_frame(
+#   timestamp = seq(min(df_abj_hr$timestamp), max(df_abj_hr$timestamp), by = "hour")
+# ) %>%
+#   left_join(df_abj_hr, by = "timestamp")
+# # summary(df_abj_hr)
+#
+# rle_flow_na <- rle(is.na(df_abj_hr$flow))
+# rle_flow_na$lengths[rle_flow_na$values] %>% summary
+#
+# df_abj_hr %>%
+#   ggplot(aes(timestamp, flow)) +
+#   geom_line()
 
-df_abj_uv <- df_abj_uv_raw %>%
-  select(
-    site_no,
-    timestamp = dateTime,
-    flow = X_00060_00000
-  ) %>%
-  mutate(
-    site = "aberjona",
-    timestamp = with_tz(timestamp, tzone = "US/Eastern")
-  )
-
-df_abj_hr <- df_abj_uv %>%
-  mutate(
-    timestamp = ceiling_date(timestamp, unit = "hour")
-  ) %>%
-  group_by(timestamp) %>%
-  summarize(
-    flow = mean(flow)
-  )
-# summary(df_abj_hr)
-
-df_abj_hr <- data_frame(
-  timestamp = seq(min(df_abj_hr$timestamp), max(df_abj_hr$timestamp), by = "hour")
-) %>%
-  left_join(df_abj_hr, by = "timestamp")
-# summary(df_abj_hr)
-
-rle_flow_na <- rle(is.na(df_abj_hr$flow))
-rle_flow_na$lengths[rle_flow_na$values] %>% summary
-
-df_abj_hr %>%
-  ggplot(aes(timestamp, flow)) +
-  geom_line()
-# missing too much data (most of 2015)
 
 
 # daily aberjona ----------------------------------------------------------
 
-df_abj_day_raw <- readNWISdv(siteNumber = "01102500", parameterCd = "00060", startDate = "2006-01-01", endDate = "2016-12-31")
+df_abj_day_raw <- readNWISdv(siteNumber = "01102500", parameterCd = "00060", startDate = "2005-01-01", endDate = "2016-12-31")
 
 df_abj_day <- df_abj_day_raw %>%
   as_tibble() %>%
@@ -58,8 +61,12 @@ df_abj_day <- df_abj_day_raw %>%
   ) %>%
   mutate(
     site = "aberjona"
-  ) %>%
-  complete(site_no, site, date = seq(min(df_ale_day$date), max(df_ale_day$date), by = "day"))
+  )
+
+df_abj_day <- df_abj_day %>%
+  complete(site_no, site, date = seq(START, END, by = "day"))
+
+stopifnot(all(!is.na(df_abj_day$flow)))
 
 df_abj_day %>%
   ggplot(aes(date, flow)) +
@@ -67,7 +74,7 @@ df_abj_day %>%
 
 # daily alewife -----------------------------------------------------------
 
-df_ale_day_raw <- readNWISdv(siteNumber = "01103025", parameterCd = "00060", startDate = "2006-01-01", endDate = "2016-12-31")
+df_ale_day_raw <- readNWISdv(siteNumber = "01103025", parameterCd = "00060", startDate = "2005-01-01", endDate = "2016-12-31")
 
 df_ale_day <- df_ale_day_raw %>%
   as_tibble() %>%
@@ -78,7 +85,9 @@ df_ale_day <- df_ale_day_raw %>%
   ) %>%
   mutate(
     site = "alewife"
-  ) %>%
+  )
+
+df_ale_day <- df_ale_day %>%
   complete(site_no, site, date = seq(min(df_ale_day$date), max(df_ale_day$date), by = "day"))
 
 df_ale_day %>%

@@ -9,48 +9,8 @@ library(stringr)
 rm(list = ls())
 
 
-model_ids <- c(
-  "MAR036_ECOLI",
-  "MWRA176_ECOLI",
-  "MWRA176_ENT",
-  "MAR0065_ECOLI",
-  "MYR0435_ECOLI",
-  "MYRBOBDOCK_ECOLI",
-  "MYRBOBDOCK_ENT",
-  "WEPBCH_ECOLI",
-  "UPLSHBCH_ENT"
-)
+# load wq -----------------------------------------------------------------
 
-model_locations <- c(
-  "MAR036" = "MAR036",
-  "MWRA176" = "MWRA176",
-  "MAR0065" = "MAR0065",
-  "MWRA177" = "MYR0435",
-  "MYR0435" = "MYR0435",
-  "MYRBOBDOCK" = "MYRBOBDOCK",
-  "WEPBCHC" = "WEPBCH",
-  "WEPBOBC" = "WEPBCH",
-  "UPLSHBM" = "UPLSHBCH",
-  "UPLSHBC" = "UPLSHBCH"
-)
-
-model_standards <- c(
-  "MAR036_ECOLI" = "BOAT",
-  "MWRA176_ECOLI" = "BOAT",
-  "MWRA176_ENT" = "BOAT",
-  "MAR0065_ECOLI" = "BOAT",
-  "MYR0435_ECOLI" = "BOAT",
-  "MYRBOBDOCK_ECOLI" = "BOAT",
-  "MYRBOBDOCK_ENT" = "BOAT",
-  "WEPBCH_ECOLI" = "SWIM",
-  "UPLSHBCH_ENT" = "SWIM"
-)
-
-bacteria_standards <- data_frame(
-  CharacteristicID = c("ECOLI", "ECOLI", "ENT", "ENT"),
-  StandardType = c("SWIM", "BOAT", "SWIM", "BOAT"),
-  StandardValue = c(235, 1260, 104, 350)
-)
 
 df_muni <- read_csv(
   "https://raw.githubusercontent.com/nesanders/myrwa-rf-bact-prediction/testing/source_data/muni_dcr_hist.csv",
@@ -93,7 +53,8 @@ df_mwra <- read_csv(
     StaffGage = col_integer(),
     Precip.48 = col_double()
   )
-)
+) %>%
+  filter(SampleTypeID == "S")
 df_myrwa <- read_csv(
   "https://raw.githubusercontent.com/nesanders/myrwa-rf-bact-prediction/testing/source_data/rec_flag_2015_16.csv",
   col_types = cols(
@@ -114,9 +75,32 @@ df_myrwa <- read_csv(
     StaffGage = col_integer(),
     Precip.48 = col_double()
   )
+) %>%
+  filter(SampleTypeID == "S")
+
+
+# load model --------------------------------------------------------------
+
+location_model <- read_csv(
+  "data/location_model.csv",
+  col_types = cols(
+    LocationID = col_character(),
+    ModelLocation = col_character()
+  )
 )
 
+model_characteristic <- read_csv(
+  "data/model_characteristic.csv",
+  col_types = cols(
+    ModelLocation = col_character(),
+    CharacteristicID = col_character()
+  )
+)
 
+bacteria_standards <- c(
+  "ECOLI" = 1260,
+  "ENT" = 350
+)
 
 df <- bind_rows(
   df_muni,
@@ -124,21 +108,22 @@ df <- bind_rows(
   df_myrwa
 ) %>%
   filter(CharacteristicID %in% c("ENT", "ECOLI")) %>%
-  filter(LocationID %in% names(model_locations)) %>%
+  inner_join(location_model, by = "LocationID") %>%
+  inner_join(model_characteristic, by = c("ModelLocation", "CharacteristicID")) %>%
   mutate(
-    Datetime = force_tz(Datetime, tzone = "US/Eastern"),
-    ModelLocation = plyr::revalue(LocationID, model_locations),
     ModelID = paste(ModelLocation, CharacteristicID, sep = "_"),
-    StandardType = plyr::revalue(ModelID, model_standards)
-  ) %>%
-  filter(ModelID %in% model_ids) %>%
-  left_join(bacteria_standards, by = c("CharacteristicID", "StandardType"))
+    Datetime = force_tz(Datetime, tzone = "US/Eastern"),
+    StandardValue = as.numeric(plyr::revalue(CharacteristicID, bacteria_standards)),
+    Exceedance = ResultValue > StandardValue
+  )
 
 table(df$LocationID, df$ProjectID)
+table(df$LocationID, df$ModelLocation)
 table(df$ModelLocation, df$CharacteristicID)
-table(df$ModelID)
-table(df$ModelID, df$ProjectID)
-table(df$ModelID, df$StandardType)
+table(df$ModelLocation, df$ProjectID)
+table(df$ModelID, df$Exceedance)
+table(df$ModelID, df$Exceedance) %>% prop.table(margin = 1)
+table(df$CharacteristicID, df$StandardValue)
 
 df %>%
   ggplot(aes(Datetime, log10(ResultValue), color = ResultValue > StandardValue)) +
@@ -149,14 +134,13 @@ df_out <- df %>%
   select(
     model_id = ModelID,
     model_location = ModelLocation,
+    location_id = LocationID,
+    project_id = ProjectID,
     parameter = CharacteristicID,
-    standard_type = StandardType,
     standard_value = StandardValue,
     timestamp = Datetime,
-    concentration = ResultValue
-  ) %>%
-  mutate(
-    exceedance = concentration > standard_value
+    concentration = ResultValue,
+    exceedance = Exceedance
   )
 
 table(df_out$model_id, df_out$exceedance)

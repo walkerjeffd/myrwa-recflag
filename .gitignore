@@ -8,4 +8,8 @@ apps/config/*.js
 
 r/*.png
 r/.Rhistory
+r/data
+r/*.rds
+r/pdf/*.pdf
+r/rmd/*.html
 .Rproj.user

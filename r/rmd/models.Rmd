@@ -1,0 +1,780 @@
+---
+title: "Recreational Flagging - Model Development"
+author: "Jeffrey D Walker, PhD"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(caret)
+library(pROC)
+library(tidyverse)
+library(lubridate)
+library(gridExtra)
+theme_set(theme_bw())
+theme_update(
+  strip.background = element_blank(),
+  strip.text = element_text(face = "bold", size = 12)
+)
+
+source("../functions.R")
+
+model_info <- read_csv("../data/location_model.csv")
+
+df_models <- readRDS("../models.rds") %>% 
+  mutate(
+    freq_exceedance_train = map_dbl(df_train, ~ mean(.$exceedance)),
+    n_sample_train = map_int(df_train, nrow),
+    freq_exceedance_test = map_dbl(df_test, ~ mean(.$exceedance)),
+    n_sample_test = map_int(df_test, nrow)
+  )
+df_weather <- readRDS("../data/weather.rds")
+df_wq <- readRDS("../data/wq.rds")
+
+param_labels <- c(
+  ECOLI = "E. coli (#/100mL)",
+  ENT = "Enterococcus (#/100mL)"
+)
+```
+
+# Overview
+
+This document summarizes bacteria exceedance prediction models for the Mystic River Recreational Flagging project. 
+
+
+## Methodology
+
+A logistic regression model was fit to each of three locations (Mystic River @ Rt 16 Bridge, Lower Malden River @ Rt 16 Bridge, Shannon Beach @ Upper Mystic Lake). Robust models could not be fit to the other potential locations (Blessing of the Bay Boathouse, Wedge Pond) either because there were not good climatic and hydrologic predictor variables, or because the exceedance frequency was too low. 
+
+At each location, the data were split into training (75%) and testing (25%) subsets using stratified random sampling (i.e. each subset contains approximately the same percent of exceedances). The training subsets were then fed into multiple classification models including logistic regression (using all variables, and step-wise feature selection based on AIC), elastic net regression, random forest, gradient boosting, and support vector machine. Using the `caret` package, each type of model was optimized over its tuning parameters. The variable importance functions of each model were then used to identify which predictors were most common among the different types of models. In general, the step-wise logistic regression model to minimize AIC performed very well, and resulted in the set of strongest predictors at each site. Various combinations of these predictors were then fit to a standard logistic regression model using 10-fold cross validation repeated 3 times. The final model was then based on the set of predictors that performed best. 
+
+## Performance Metrics
+
+Each model can be evaluated by various metrics. Descriptions and interpretation for each metric (more info [here](http://shahramabyari.com/2016/02/22/measuring-performance-of-classifiers/) are as follows:
+
+- **Null Deviance**: Deviance of a logistic regression model with only an intercept term (i.e. no other predictors)
+- **Model Deviance**: Remaining deviance of the fitted logistic regression model with predictors
+- **No Information Rate**: The percent of exceedances in the dataset (i.e. the probability of any given sample being a non-exceedance regardless of other information) 
+- **Accuracy**: The percent of samples correctly predicted (# True Positives + # True Negatives / Total #). Accuracy should be greater than the No Information Rate. For Shannon Beach, the accuracy is slightly lower than the no information rate, however, the other metrics suggest it is still a credible model. This metric can be misleading if there is large class imbalance (i.e. much higher % of non-exceedances than exceedances).
+- **Kappa**: Overall measure of agreement that is more robust than Accuracy. Ranges from -1 (predicts opposite of true values), 0 (no agreement), +1 (predicts exact true values). Kappa values greater than between 0.3 - 0.5 are considered acceptable.
+- **ROC AUC**: Area under the Receiving Operator Curve (ROC). A value of 0.5 indicates a useless model. Values greater than 0.9 are considered "excellent".
+- **Sensitivity**: True positive rate (# True Positive / # True Positive + # False Negative). In other words, how many of the true positive (exceedance) samples were correctly identified. 
+- **Specificity**: True negative rate (# True Negative / # True Negative + # False Positive). How many of true negatives (non-exceedances) were correctly identified. Because of the class imbalance, this number is always high (it's easy to predict non-exceedance).
+- **Precision**: Positive predictive value (# True Positive / # True Positive + # False Positive). The percent of predicted positive samples (exceedances) that were in fact positive.
+- **Recall**: Negative predictive value (# True Negative / # True Negative + # False Negative). The percent of predicted negative samples (non-exceedances) that were in fact negative. 
+
+Note that because of the datasets have high class imbalance (exceedances are much less common than non-exceedances), the most informative metrics are Kappa, ROC AUC, Precision and Recall. However, following the guidance by Fancy et al (2013), model acceptance was based on the following goals:
+
+- **Accuracy > 0.80**
+- **Sensitivity > 0.5**
+- **Specificity > 0.85**
+
+The following table summarizes the performance of each model on the **training** datasets.All three models meet each of these criteria.
+
+```{r}
+df_models %>% 
+  arrange(model_id) %>% 
+  select(model_id, n_sample_train, freq_exceedance_train, nulldev, dev, accuracy_null_train, accuracy_train, kappa_train, roc_train, sensitivity_train, specificity_train, precision_train, recall_train) %>% 
+  mutate(freq_exceedance_train = freq_exceedance_train * 100) %>% 
+  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "Null Deviance", "Model Deviance", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Precision", "Recall"), digits = 2)
+```
+
+This table shows the same metrics based on the **testing** subset for each model (excludes deviance metrics that are not relevant for the testing subset). The Mystic and Malden models continue to meet the criteria. The Shannon Beach model, however, has relatively poor performance. However, the overall frequency of exceedances is much lower at this site relative to the others. The training dataset only included 3 exceedances (out of 77 samples total), so these relatively low performance metrics are to be expected. 
+
+```{r}
+df_models %>% 
+  arrange(model_id) %>% 
+  select(model_id, n_sample_test, freq_exceedance_test, accuracy_null_test, accuracy_test, kappa_test, roc_test, sensitivity_test, specificity_test, precision_test, recall_test) %>% 
+  mutate(freq_exceedance_test = freq_exceedance_test * 100) %>% 
+  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Precision", "Recall"), digits = 2)
+```
+
+# Mystic River at Rt 16 Bridge (E. coli)
+
+```{r}
+idx <- which(df_models$model_id == "MYSTIC_ECOLI")
+std_value <- unique(df_models$df[[idx]]$standard_value)
+param <- unique(df_models$df[[idx]]$parameter)
+
+df_models$df[[idx]]$train <- FALSE
+df_models$df[[idx]]$train[df_models$training_rows[[idx]]] <- TRUE
+stopifnot(abs(sum(df_models$df_train[[idx]]$concentration) - sum(filter(df_models$df[[idx]], train)$concentration)) < 0.1)
+stopifnot(abs(sum(df_models$df_test[[idx]]$concentration) - sum(filter(df_models$df[[idx]], !train)$concentration)) < 0.1)
+```
+
+## Dataset
+
+Number of exceedance (`yes`) and non-exceedance (`no`) samples by project and monitoring location.
+
+```{r}
+x <- df_models$df[[idx]]
+tn <- table(paste(x$project_id, x$location_id, sep = " - "), x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+```{r, fig.width=10}
+df_models$df[[idx]] %>% 
+  ggplot(aes(timestamp, concentration, color = interaction(project_id, location_id, sep = "-"))) +
+  geom_point() +
+  geom_hline(data = data_frame(), aes(yintercept = std_value, linetype = "Boating Standard")) +
+  scale_x_datetime(breaks = scales::date_breaks("1 year"), labels = scales::date_format("%Y")) +
+  scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+ ) +
+  scale_color_manual(
+    "ProjectID-LocationID",
+    values = c("orangered", "deepskyblue")
+  ) +
+  scale_linetype_manual("", values = "dashed") +
+  labs(
+    x = "Date",
+    y = param_labels[param],
+    title = "Mystic River @ Rt 16 Bridge"
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(panel.grid.minor = element_blank())
+```
+
+Dataset was split into training (75%) and testing (25%) subsets.
+
+```{r}
+x <- bind_rows(
+  select(df_models$df_train[[idx]], exceedance_class) %>% mutate(dataset = "Training"),
+  select(df_models$df_test[[idx]], exceedance_class) %>% mutate(dataset = "Testing")
+) %>% 
+  mutate(
+    dataset = factor(dataset, levels = c("Training", "Testing"))
+  )
+
+# sample count
+tn <- table(x$dataset, x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+## Prediction Model
+
+The logistic regression model for the Mystic River is based on `r length(df_models$model[[idx]]$finalModel$xNames)` predictors:
+
+- `precip_sum_p24hr_lag0hr`: total rainfall (inches) over 24 hours prior to sample timestamp
+- `precip_sum_p24hr_lag24hr`: total rainfall (inches) between 24 and 48 hours prior to sample timestamp
+- `hours_since_050in_precip_event`: number of hours since last 0.5 inch rainfall event
+
+Note that the sum of `precip_sum_p24hr_lag0hr + precip_sum_p24hr_lag24hr` is equal to the 48-hour antecedent rainfall. However, splitting that amount into two separate variables resulted in a better model. They are also not strongly correlated.
+
+All predictors were centered and scaled prior to fitting.
+
+Diagnostic output of the logistic regression model:
+
+```{r}
+summary(df_models$model[[idx]]$finalModel)
+```
+
+This model accounts for `r scales::percent(df_models$dev[idx] / df_models$nulldev[idx])` of the total deviance (pseudo-R^2 value of `r format(1 - df_models$dev[idx] / df_models$nulldev[idx], digits = 2)`).
+
+Relationships between E. coli concentration and value of each predictor.
+
+```{r, fig.width = 10, fig.height = 10}
+df_models$df[[idx]][, c("train", "concentration", "exceedance_class", names(coef(df_models$model[[idx]]$finalModel))[-1])] %>%
+  gather(var, value, -train, -concentration, -exceedance_class) %>%
+  ggplot(aes(value, concentration, color = exceedance_class)) +
+  geom_point(aes(shape = train)) +
+  scale_y_log10(
+   breaks = scales::log_breaks(),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+  ) +
+  scale_color_manual("Exceedance", values = c("orangered", "deepskyblue")) +
+  scale_shape_manual("Data Subset", values = c("TRUE" = 16, "FALSE" = 1), labels = c("TRUE" = "Training", "FALSE" = "Testing")) +
+  facet_wrap(~ var, scales = "free_x", ncol = 2, strip.position = "bottom") +
+  labs(
+    x = "",
+    y = param_labels[param]
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(
+    strip.placement = "outside",
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+## ROC Curves
+
+```{r}
+roc_train <- roc(df_models$df_train[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_train[[idx]], type = "prob")[["yes"]])
+roc_test <- roc(df_models$df_test[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_test[[idx]], type = "prob")[["yes"]])
+
+data_frame(
+  "Data Subset" = c("Testing", "Training"),
+  "Area Under Curve (AUC)" = c(as.numeric(roc_test$auc), as.numeric(roc_train$auc))
+) %>% 
+  knitr::kable()
+
+bind_rows(
+  data_frame(
+    sens = roc_train$sensitivities,
+    spec = roc_train$specificities,
+    dataset = "Training"
+  ),
+  data_frame(
+    sens = roc_test$sensitivities,
+    spec = roc_test$specificities,
+    dataset = "Testing"
+  )
+) %>% 
+  ggplot(aes(spec, sens, color = dataset)) +
+  geom_path() +
+  geom_abline(slope = 1, intercept = 1, color = "gray50") +
+  scale_x_reverse() +
+  scale_color_manual("Data Subset", values = c("orangered", "deepskyblue")) +
+  labs(
+    x = "Specificity (True Negative Rate)",
+    y = "Sensitivity (True Positive Rate)"
+  ) +
+  theme(aspect.ratio = 1)
+```
+
+## Cutoff Optimization
+
+The logistic regression model predicts the probability of an exceedance. In order to classify that probability as being an exceedance or not, we need to determine an optimal cutoff probability. By default, logistic regression algorithms tend to use 0.5 as the cutoff. However, when the dataset has large class imbalance (exceedances are far less frequent than non-exceedances), then the optimal cutoff probability can be higher or lower than 0.5. One way to determine the optimal cutoff is to compute the accuracy (Number of Accurate Predictions), specificity (True Negative Rate), and sensitivity (True Positive Rate) for a range of cutoff thresholds. The following plots show these three metrics using both the training and testing subsets. The `distance` metric is the combined distance of both the sensitivity and specificity to values of 1. The goal is to minimize the distance metric, while not sacrificing accuracy. The optimal cutoff for this model was determined to be about 0.2.
+
+```{r, fig.width = 10, fig.height = 4}
+cutoffs_train <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_train[[idx]])
+cutoffs_test <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_test[[idx]])
+
+p1 <- cutoffs_train %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  ylim(0, 1) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Training Subset"
+  ) +
+  theme(aspect.ratio = 1)
+p2 <- cutoffs_test %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  ylim(0, 1) +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Testing Subset"
+  ) +
+  theme(aspect.ratio = 1)
+grid.arrange(p1, p2, ncol = 2)
+```
+
+## Confusion Matrix
+
+For the training dataset, the following shows various metrics using the confusion matrix (i.e. tabulation of true positive, false negative, true negative, and false positive). The overall accuracy should be greater than the No Information Rate, which is simply the proportion of non-exceedance samples in the dataset. If the accuracy is less than the No Information Rate, then a naive model based solely on the proportion of exceedances and non-exceedances is a better predictor than the model. 
+
+```{r}
+df_models$cfm_train[[idx]]
+```
+
+For the test dataset, the confusion matrix and associated summary metrics are:
+
+```{r}
+df_models$cfm_test[[idx]]
+```
+
+## Cross-Validation
+
+During model development, the logistic regression model was fitted to 30 random resamples of the training subset using 10-fold cross-validation repeated 3 times. For each resample, the coefficients were fitted and then ROC statistics computed using a cutoff probability of 0.2. This boxplot shows the distribution of each statistic across the 30 resamples (red circle = mean). This figure gives some indication as to how sensitive the model is to the specific dataset. The final model was fitted to all of the data in the training subset.
+
+```{r}
+x <- df_models$model[[idx]]$resample %>% 
+  rename(Sensitivity = Sens, Specificity = Spec, `ROC-AUC` = ROC) %>% 
+  gather(var, value, -Resample)
+x %>% 
+  ggplot(aes(var, value)) +
+  geom_boxplot() +
+  geom_point(
+    data = group_by(x, var) %>% summarize(mean = mean(value)),
+    aes(var, mean),
+    color = "red", size = 3
+  ) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = "", y = "", title = "Distribution of ROC Statistics over 30 Resamples")
+```
+
+
+# Lower Malden River at Rt 16 Bridge (E. coli)
+
+```{r}
+idx <- which(df_models$model_id == "MALDENLOWER_ECOLI")
+std_value <- unique(df_models$df[[idx]]$standard_value)
+param <- unique(df_models$df[[idx]]$parameter)
+
+df_models$df[[idx]]$train <- FALSE
+df_models$df[[idx]]$train[df_models$training_rows[[idx]]] <- TRUE
+stopifnot(abs(sum(df_models$df_train[[idx]]$concentration) - sum(filter(df_models$df[[idx]], train)$concentration)) < 0.1)
+stopifnot(abs(sum(df_models$df_test[[idx]]$concentration) - sum(filter(df_models$df[[idx]], !train)$concentration)) < 0.1)
+```
+
+## Dataset
+
+Number of exceedance (`yes`) and non-exceedance (`no`) samples by project and monitoring location.
+
+```{r}
+x <- df_models$df[[idx]]
+tn <- table(paste(x$project_id, x$location_id, sep = " - "), x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+```{r, fig.width=10}
+df_models$df[[idx]] %>% 
+  ggplot(aes(timestamp, concentration, color = interaction(project_id, location_id, sep = "-"))) +
+  geom_point() +
+  geom_hline(data = data_frame(), aes(yintercept = std_value, linetype = "Boating Standard")) +
+  scale_x_datetime(breaks = scales::date_breaks("1 year"), labels = scales::date_format("%Y")) +
+  scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+ ) +
+  scale_color_manual(
+    "ProjectID-LocationID",
+    values = c("orangered", "deepskyblue")
+  ) +
+  scale_linetype_manual("", values = "dashed") +
+  labs(
+    x = "Date",
+    y = param_labels[param],
+    title = "Lower Malden River @ Rt 16 Bridge"
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(panel.grid.minor = element_blank())
+```
+
+Dataset was split into training (75%) and testing (25%) subsets.
+
+```{r}
+x <- bind_rows(
+  select(df_models$df_train[[idx]], exceedance_class) %>% mutate(dataset = "Training"),
+  select(df_models$df_test[[idx]], exceedance_class) %>% mutate(dataset = "Testing")
+) %>% 
+  mutate(
+    dataset = factor(dataset, levels = c("Training", "Testing"))
+  )
+
+# sample count
+tn <- table(x$dataset, x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+## Prediction Model
+
+The logistic regression model for the Mystic River is based on `r length(df_models$model[[idx]]$finalModel$xNames)` predictors:
+
+- `precip_sum_p24hr_lag0hr`: total rainfall (inches) over 24 hours prior to sample timestamp
+- `precip_sum_p24hr_lag24hr`: total rainfall (inches) between 24 and 48 hours prior to sample timestamp
+- `hours_since_100in_precip_event`: number of hours since last 1.0 inch rainfall event
+- `pressure_change_p72hr`: change in barometric pressure (inHg) from 72 hours prior to sample timestamp (when negative, indicates storms moving in)
+- `temp_change_p72hr`: change in air temperature (degF) from 72 hours prior to sample timestamp
+
+Note that the sum of `precip_sum_p24hr_lag0hr + precip_sum_p24hr_lag24hr` is equal to the 48-hour antecedent rainfall. However, splitting that amount into two separate variables resulted in a better model. They are also not strongly correlated.
+
+All predictors were centered and scaled prior to fitting.
+
+Diagnostic output of the logistic regression model:
+
+```{r}
+summary(df_models$model[[idx]]$finalModel)
+```
+
+This model accounts for `r scales::percent(df_models$dev[idx] / df_models$nulldev[idx])` of the total deviance (pseudo-R^2 value of `r format(1 - df_models$dev[idx] / df_models$nulldev[idx], digits = 2)`).
+
+Relationships between E. coli concentration and value of each predictor.
+
+```{r, fig.width = 10, fig.height = 14}
+df_models$df[[idx]][, c("train", "concentration", "exceedance_class", names(coef(df_models$model[[idx]]$finalModel))[-1])] %>%
+  gather(var, value, -train, -concentration, -exceedance_class) %>%
+  ggplot(aes(value, concentration, color = exceedance_class)) +
+  geom_point(aes(shape = train)) +
+  scale_y_log10(
+   breaks = scales::log_breaks(),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+  ) +
+  scale_color_manual("Exceedance", values = c("orangered", "deepskyblue")) +
+  scale_shape_manual("Data Subset", values = c("TRUE" = 16, "FALSE" = 1), labels = c("TRUE" = "Training", "FALSE" = "Testing")) +
+  facet_wrap(~ var, scales = "free_x", ncol = 2, strip.position = "bottom") +
+  labs(
+    x = "",
+    y = param_labels[param]
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(
+    strip.placement = "outside",
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+## ROC Curves
+
+```{r}
+roc_train <- roc(df_models$df_train[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_train[[idx]], type = "prob")[["yes"]])
+roc_test <- roc(df_models$df_test[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_test[[idx]], type = "prob")[["yes"]])
+
+data_frame(
+  "Data Subset" = c("Testing", "Training"),
+  "Area Under Curve (AUC)" = c(as.numeric(roc_test$auc), as.numeric(roc_train$auc))
+) %>% 
+  knitr::kable()
+
+bind_rows(
+  data_frame(
+    sens = roc_train$sensitivities,
+    spec = roc_train$specificities,
+    dataset = "Training"
+  ),
+  data_frame(
+    sens = roc_test$sensitivities,
+    spec = roc_test$specificities,
+    dataset = "Testing"
+  )
+) %>% 
+  ggplot(aes(spec, sens, color = dataset)) +
+  geom_path() +
+  geom_abline(slope = 1, intercept = 1, color = "gray50") +
+  scale_x_reverse() +
+  scale_color_manual("Data Subset", values = c("orangered", "deepskyblue")) +
+  labs(
+    x = "Specificity (True Negative Rate)",
+    y = "Sensitivity (True Positive Rate)"
+  ) +
+  theme(aspect.ratio = 1)
+```
+
+## Cutoff Optimization
+
+The logistic regression model predicts the probability of an exceedance. In order to classify that probability as being an exceedance or not, we need to determine an optimal cutoff probability. By default, logistic regression algorithms tend to use 0.5 as the cutoff. However, when the dataset has large class imbalance (exceedances are far less frequent than non-exceedances), then the optimal cutoff probability can be higher or lower than 0.5. One way to determine the optimal cutoff is to compute the accuracy (Number of Accurate Predictions), specificity (True Negative Rate), and sensitivity (True Positive Rate) for a range of cutoff thresholds. The following plots show these three metrics using both the training and testing subsets. The `distance` metric is the combined distance of both the sensitivity and specificity to values of 1. The goal is to minimize the distance metric, while not sacrificing accuracy. The optimal cutoff for this model was determined to be about 0.2.
+
+```{r, fig.width = 10, fig.height = 4}
+cutoffs_train <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_train[[idx]])
+cutoffs_test <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_test[[idx]])
+
+p1 <- cutoffs_train %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  ylim(0, 1) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Training Subset"
+  ) +
+  theme(aspect.ratio = 1)
+p2 <- cutoffs_test %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  ylim(0, 1) +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Testing Subset"
+  ) +
+  theme(aspect.ratio = 1)
+grid.arrange(p1, p2, ncol = 2)
+```
+
+## Confusion Matrix
+
+For the training dataset, the following shows various metrics using the confusion matrix (i.e. tabulation of true positive, false negative, true negative, and false positive). The overall accuracy should be greater than the No Information Rate, which is simply the proportion of non-exceedance samples in the dataset. If the accuracy is less than the No Information Rate, then a naive model based solely on the proportion of exceedances and non-exceedances is a better predictor than the model. 
+
+```{r}
+df_models$cfm_train[[idx]]
+```
+
+For the test dataset, the confusion matrix and associated summary metrics are:
+
+```{r}
+df_models$cfm_test[[idx]]
+```
+
+## Cross-Validation
+
+During model development, the logistic regression model was fitted to 30 random resamples of the training subset using 10-fold cross-validation repeated 3 times. For each resample, the coefficients were fitted and then ROC statistics computed using a cutoff probability of 0.2. This boxplot shows the distribution of each statistic across the 30 resamples (red circle = mean). This figure gives some indication as to how sensitive the model is to the specific dataset. The final model was fitted to all of the data in the training subset.
+
+```{r}
+x <- df_models$model[[idx]]$resample %>% 
+  rename(Sensitivity = Sens, Specificity = Spec, `ROC-AUC` = ROC) %>% 
+  gather(var, value, -Resample)
+x %>% 
+  ggplot(aes(var, value)) +
+  geom_boxplot() +
+  geom_point(
+    data = group_by(x, var) %>% summarize(mean = mean(value)),
+    aes(var, mean),
+    color = "red", size = 3
+  ) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = "", y = "", title = "Distribution of ROC Statistics over 30 Resamples")
+```
+
+# Shannon Beach at Upper Mystic Lake (Ent)
+
+```{r}
+idx <- which(df_models$model_id == "SHANNON_ENT")
+std_value <- unique(df_models$df[[idx]]$standard_value)
+param <- unique(df_models$df[[idx]]$parameter)
+
+df_models$df[[idx]]$train <- FALSE
+df_models$df[[idx]]$train[df_models$training_rows[[idx]]] <- TRUE
+stopifnot(abs(sum(df_models$df_train[[idx]]$concentration) - sum(filter(df_models$df[[idx]], train)$concentration)) < 0.1)
+stopifnot(abs(sum(df_models$df_test[[idx]]$concentration) - sum(filter(df_models$df[[idx]], !train)$concentration)) < 0.1)
+```
+
+## Dataset
+
+Number of exceedance (`yes`) and non-exceedance (`no`) samples by project and monitoring location.
+
+```{r}
+x <- df_models$df[[idx]]
+tn <- table(paste(x$project_id, x$location_id, sep = " - "), x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+```{r, fig.width=10}
+df_models$df[[idx]] %>% 
+  ggplot(aes(timestamp, concentration, color = interaction(project_id, location_id, sep = "-"))) +
+  geom_point() +
+  geom_hline(data = data_frame(), aes(yintercept = std_value, linetype = "Boating Standard")) +
+  scale_x_datetime(breaks = scales::date_breaks("1 year"), labels = scales::date_format("%Y")) +
+  scale_y_log10(
+   breaks = scales::trans_breaks("log10", function(x) 10^x),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+ ) +
+  scale_color_manual(
+    "ProjectID-LocationID",
+    values = c("orangered", "deepskyblue")
+  ) +
+  scale_linetype_manual("", values = "dashed") +
+  labs(
+    x = "Date",
+    y = param_labels[param],
+    title = "Shannon Beach at Upper Mystic Lake"
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(panel.grid.minor = element_blank())
+```
+
+Dataset was split into training (75%) and testing (25%) subsets.
+
+```{r}
+x <- bind_rows(
+  select(df_models$df_train[[idx]], exceedance_class) %>% mutate(dataset = "Training"),
+  select(df_models$df_test[[idx]], exceedance_class) %>% mutate(dataset = "Testing")
+) %>% 
+  mutate(
+    dataset = factor(dataset, levels = c("Training", "Testing"))
+  )
+
+# sample count
+tn <- table(x$dataset, x$exceedance_class)
+tn <- cbind(tn, Total = rowSums(tn))
+tn <- rbind(tn, Total = colSums(tn))
+tn
+```
+
+## Prediction Model
+
+The logistic regression model for the Mystic River is based on `r length(df_models$model[[idx]]$finalModel$xNames)` predictor:
+
+- `aberjona_logflow_p1d`: daily mean streamflow (log-10 transformed) at Aberjona River gauge (Station ID: `01102500`) on the day before sample was collected
+
+All predictors were centered and scaled prior to fitting.
+
+Diagnostic output of the logistic regression model:
+
+```{r}
+summary(df_models$model[[idx]]$finalModel)
+```
+
+This model accounts for `r scales::percent(df_models$dev[idx] / df_models$nulldev[idx])` of the total deviance (pseudo-R^2 value of `r format(1 - df_models$dev[idx] / df_models$nulldev[idx], digits = 2)`).
+
+Relationships between E. coli concentration and value of each predictor.
+
+```{r, fig.width = 6, fig.height = 5}
+df_models$df[[idx]][, c("train", "concentration", "exceedance_class", names(coef(df_models$model[[idx]]$finalModel))[-1])] %>%
+  gather(var, value, -train, -concentration, -exceedance_class) %>%
+  ggplot(aes(value, concentration, color = exceedance_class)) +
+  geom_point(aes(shape = train)) +
+  scale_y_log10(
+   breaks = scales::log_breaks(),
+   labels = scales::trans_format("log10", function(x) scales::comma(10^x))
+  ) +
+  scale_color_manual("Exceedance", values = c("orangered", "deepskyblue")) +
+  scale_shape_manual("Data Subset", values = c("TRUE" = 16, "FALSE" = 1), labels = c("TRUE" = "Training", "FALSE" = "Testing")) +
+  facet_wrap(~ var, scales = "free_x", ncol = 2, strip.position = "bottom") +
+  labs(
+    x = "",
+    y = param_labels[param]
+  ) +
+  annotation_logticks(sides = "l") + 
+  theme(
+    strip.placement = "outside",
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+## ROC Curves
+
+```{r}
+roc_train <- roc(df_models$df_train[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_train[[idx]], type = "prob")[["yes"]])
+roc_test <- roc(df_models$df_test[[idx]]$exceedance, predict(df_models$model[[idx]], newdata = df_models$df_test[[idx]], type = "prob")[["yes"]])
+
+data_frame(
+  "Data Subset" = c("Testing", "Training"),
+  "Area Under Curve (AUC)" = c(as.numeric(roc_test$auc), as.numeric(roc_train$auc))
+) %>% 
+  knitr::kable()
+
+bind_rows(
+  data_frame(
+    sens = roc_train$sensitivities,
+    spec = roc_train$specificities,
+    dataset = "Training"
+  ),
+  data_frame(
+    sens = roc_test$sensitivities,
+    spec = roc_test$specificities,
+    dataset = "Testing"
+  )
+) %>% 
+  ggplot(aes(spec, sens, color = dataset)) +
+  geom_path() +
+  geom_abline(slope = 1, intercept = 1, color = "gray50") +
+  scale_x_reverse() +
+  scale_color_manual("Data Subset", values = c("orangered", "deepskyblue")) +
+  labs(
+    x = "Specificity (True Negative Rate)",
+    y = "Sensitivity (True Positive Rate)"
+  ) +
+  theme(aspect.ratio = 1)
+```
+
+## Cutoff Optimization
+
+The logistic regression model predicts the probability of an exceedance. In order to classify that probability as being an exceedance or not, we need to determine an optimal cutoff probability. By default, logistic regression algorithms tend to use 0.5 as the cutoff. However, when the dataset has large class imbalance (exceedances are far less frequent than non-exceedances), then the optimal cutoff probability can be higher or lower than 0.5. One way to determine the optimal cutoff is to compute the accuracy (Number of Accurate Predictions), specificity (True Negative Rate), and sensitivity (True Positive Rate) for a range of cutoff thresholds. The following plots show these three metrics using both the training and testing subsets. The `distance` metric is the combined distance of both the sensitivity and specificity to values of 1. The goal is to minimize the distance metric, while not sacrificing accuracy. The optimal cutoff for this model was determined to be about 0.2.
+
+```{r, fig.width = 10, fig.height = 4}
+cutoffs_train <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_train[[idx]])
+cutoffs_test <- cutoff_df(m = df_models$model[[idx]], df = df_models$df_test[[idx]])
+
+p1 <- cutoffs_train %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  ylim(0, 1) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Training Subset"
+  ) +
+  theme(aspect.ratio = 1)
+p2 <- cutoffs_test %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line() +
+  ylim(0, 1) +
+  scale_color_discrete("Term", labels = c(
+    "acc" = "Accuracy",
+    "dist" = "Distance",
+    "sens" = "Sensitivity",
+    "spec" = "Specificity"
+  )) +
+  labs(
+    x = "Cutoff Probability",
+    y = "",
+    title = "Testing Subset"
+  ) +
+  theme(aspect.ratio = 1)
+grid.arrange(p1, p2, ncol = 2)
+```
+
+## Confusion Matrix
+
+For the training dataset, the following shows various metrics using the confusion matrix (i.e. tabulation of true positive, false negative, true negative, and false positive). The overall accuracy should be greater than the No Information Rate, which is simply the proportion of non-exceedance samples in the dataset. If the accuracy is less than the No Information Rate, then a naive model based solely on the proportion of exceedances and non-exceedances is a better predictor than the model. 
+
+```{r}
+df_models$cfm_train[[idx]]
+```
+
+For the test dataset, the confusion matrix and associated summary metrics are:
+
+```{r}
+df_models$cfm_test[[idx]]
+```
+
+## Cross-Validation
+
+During model development, the logistic regression model was fitted to 30 random resamples of the training subset using 10-fold cross-validation repeated 3 times. For each resample, the coefficients were fitted and then ROC statistics computed using a cutoff probability of 0.2. This boxplot shows the distribution of each statistic across the 30 resamples (red circle = mean). This figure gives some indication as to how sensitive the model is to the specific dataset. The final model was fitted to all of the data in the training subset.
+
+The sensitivity for this model is relatively low. However, this is to be expected given that only `r scales::percent(mean(df_models$df[[idx]]$exceedance))` of all samples were exceedances.
+
+```{r}
+x <- df_models$model[[idx]]$resample %>% 
+  rename(Sensitivity = Sens, Specificity = Spec, `ROC-AUC` = ROC) %>% 
+  gather(var, value, -Resample)
+x %>% 
+  ggplot(aes(var, value)) +
+  geom_boxplot() +
+  geom_point(
+    data = group_by(x, var) %>% summarize(mean = mean(value)),
+    aes(var, mean),
+    color = "red", size = 3
+  ) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = "", y = "", title = "Distribution of ROC Statistics over 30 Resamples")
+```
+

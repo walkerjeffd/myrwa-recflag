@@ -1,0 +1,442 @@
+---
+title: "Logistic Regression Notes"
+author: "Jeffrey D Walker, PhD"
+date: "10/10/2017"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set Up
+
+```{r, results='hide', message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(caret)
+library(pROC)
+
+models <- readRDS("../data/model-data.rds")
+df <- models$ls$MYSTIC_ENT
+```
+
+```{r}
+table(df$exceedance_class)
+```
+
+# Dataset Partition
+
+Use `createDataPartition()` to create stratified random sample of entire dataset.
+
+```{r}
+set.seed(1)
+training_rows <- createDataPartition(df$exceedance_class, p = 0.80, list = FALSE)
+df_train <- df[training_rows, ]
+df_test <- df[-training_rows, ]
+
+c(Train = nrow(df_train), Test = nrow(df_test))
+table(df_train$exceedance_class)
+table(df_test$exceedance_class)
+```
+
+# glm Model
+
+```{r}
+m_glm <- glm(exceedance ~ precip_sum_p24hr_lag6hr, data = df_train, family = "binomial")
+summary(m_glm)
+```
+
+- Null deviance: deviance based on "Null" model (grand mean intercept only)
+- Residual deviance: remaining deviance with full model
+
+Can compute a "psuedo-R^2" value from ratio of deviance and null deviance ([http://ethen8181.github.io/machine-learning/unbalanced/unbalanced.html]())
+
+```{r}
+pseudo_r2 <- 1 - (summary(m_glm)$deviance / summary(m_glm)$null.deviance)
+pseudo_r2
+```
+
+### Prediction
+
+Two types of prediction: 
+
+- `link`: returns log-odds
+- `response`: returns probability (`exp(logodds) / (1 + exp(logodds))`)
+
+```{r}
+m_glm_shape <- data_frame(precip_sum_p24hr_lag6hr = seq(0, max(df$precip_sum_p24hr_lag6hr), by = 0.01))
+m_glm_shape$logodds <- predict(m_glm, newdata = m_glm_shape, type = "link")
+# probability = exp(logodds) / (1 + exp(logodds))
+m_glm_shape$prob <- predict(m_glm, newdata = m_glm_shape, type = "response")
+
+m_glm_shape %>%
+  gather(var, value, logodds, prob) %>% 
+  ggplot(aes(precip_sum_p24hr_lag6hr, value)) +
+  geom_line() +
+  geom_point(
+    data = mutate(df, var = "prob"),
+    aes(x = precip_sum_p24hr_lag6hr, y = exceedance)
+  ) +
+  facet_wrap(~ var, scales = "free_y")
+```
+
+### ROC Curve
+
+ROC curve on training data.
+
+```{r}
+pred_prob <- predict(m_glm, newdata = df_train, type = "response") # same as fitted(m_glm)
+
+roc <- roc(df_train$exceedance, pred_prob)
+print(roc)
+```
+
+Area under the curve: represents probability that a classifier will rank a randomly chosen positive observation higher than a randomly chosen negative observation. Independent of cutoff threshold.
+
+```{r}
+auc <- auc(roc)
+print(auc)
+```
+
+Plot ROC curve
+
+```{r}
+plot(roc)
+```
+
+### Confusion Matrix
+
+`confusionMatrix()` requires predictions to be 2-level factors. To create factors, must choose a cutoff value.
+
+```{r}
+pred_factor <- factor(if_else(pred_prob > 0.5, "yes", "no"), levels = levels(df_train$exceedance_class))
+table(pred_factor)
+confusionMatrix(
+  data = pred_factor,
+  reference = df_train$exceedance_class,
+  positive = "yes"
+)
+```
+
+Metrics ([http://www.dataschool.io/simple-guide-to-confusion-matrix-terminology/]()):
+
+- `Accuracy`: Percent correct predictions (`TP + TN / Total N`)
+- `No Information Rate`: Average proportion of `no` classes (`1 - mean(df_train$exceedance)`)
+- `Kappa`: Agreement (`P_o - P_e / 1 - P_e`)
+- `Sensitivity`: True positive rate, recall (`TP / TP + FN`)
+- `Specificity`: True negative rate (`TN / TN + FP`)
+
+Ref: [Measuring Performance of Classifiers](http://shahramabyari.com/2016/02/22/measuring-performance-of-classifiers/)
+
+`Kappa` varies over `[-1, +1]` where `+1` is full agreement, `0` is no agreement, and `-1` is opposite agreement. Acceptable value `> 0.3 to 0.5`. 
+
+Can also use precision-recall summary, which is better for imbalanced classes
+
+```{r}
+confusionMatrix(
+  data = pred_factor,
+  reference = df_train$exceedance_class,
+  positive = "yes",
+  mode = "prec_recall"
+)
+```
+
+Metrics:
+
+- `Precision`: percent of true positives out of all predicted positives (if predicts `yes`, how often correct?) (`TP / TP + FP`)
+- `Recall`: percent of true positives out of all true positives (`TP / TP + FN`)
+
+### Two Class Summary
+
+The `twoClassSummary` function in `caret` package returns the ROC AUC, Sensitivity and Specificity. Requires data frame with 2-factor columns `pred`, `obs`, plus one colum for each factor containin the predicted probabilities.
+
+```{r}
+two_class_summary <- data_frame(
+  yes = pred_prob
+) %>%
+  mutate(
+    no = 1 - yes,
+    pred = pred_factor,             # factor
+    obs = df_train$exceedance_class # factor
+  ) %>%
+  as.data.frame() %>% 
+  twoClassSummary(data = ., lev = levels(.$obs), model = NULL)
+print(two_class_summary)
+```
+
+Can also compute the combined distance of the sensitivity and specificity from 1 (useful for tuning model to maximize specificity/sensitivity).
+
+```{r}
+coords <- matrix(
+  c(1, 1, two_class_summary["Spec"], two_class_summary["Sens"]),
+  ncol = 2,
+  byrow = TRUE
+)
+colnames(coords) <- c("Spec", "Sens")
+rownames(coords) <- c("Best", "Current")
+print(coords)
+print(c(two_class_summary, Dist = dist(coords)[1]))
+```
+
+
+### Optimizing Probability Thresholds
+
+[Optimizing Probability Thresholds for Class Imbalances](http://appliedpredictivemodeling.com/blog/2014/2/1/lw6har9oewknvus176q4o41alqw2ow)
+
+```{r}
+df_cutoff <- data_frame(
+    cutoff = seq(0.01, 0.99, 0.01)
+  ) %>%
+  mutate(
+    tcs = map(cutoff, function (cutoff) {
+      x <- data_frame(
+        yes = pred_prob
+      ) %>%
+        mutate(
+          no = 1 - yes,
+          pred = factor(if_else(pred_prob > cutoff, "yes", "no"), levels = levels(df_train$exceedance_class)),
+          obs = df_train$exceedance_class
+        ) %>%
+        as.data.frame()
+
+      tcs <- twoClassSummary(data = x, lev = levels(x$obs), model = NULL)
+      coords <- matrix(
+        c(1, 1, tcs["Spec"], tcs["Sens"]),
+        ncol = 2,
+        byrow = TRUE
+      )
+      colnames(coords) <- c("Spec", "Sens")
+      rownames(coords) <- c("Best", "Current")
+
+      tcs_dist <- dist(coords)[1]
+      
+      data_frame(
+        roc = tcs["ROC"],
+        sens = tcs["Sens"],
+        spec = tcs["Spec"],
+        dist = tcs_dist
+      )
+    })
+  ) %>%
+  unnest(tcs)
+
+df_cutoff %>% 
+  gather(term, value, -cutoff, -roc) %>%
+  ggplot(aes(cutoff, value, color = term)) +
+  geom_line()
+```
+
+Best cutoff is:
+
+```{r}
+best_cutoff <- mean(df_cutoff$cutoff[which(df_cutoff$dist == min(df_cutoff$dist))])
+print(best_cutoff)
+```
+
+With corresponding confusion matrix
+
+```{r}
+confusionMatrix(
+  data = factor(if_else(pred_prob > best_cutoff, "yes", "no"), levels = levels(df_train$exceedance_class)),
+  reference = df_train$exceedance_class,
+  positive = "yes",
+  mode = "prec_recall"
+)
+```
+
+### Using Weights for Imbalance
+
+[Handling Class Imbalance with R and Caret - An Introduction](http://dpmartin42.github.io/blogposts/r/imbalanced-classes-part-1)
+
+Assign sample weights for fitting model.
+
+```{r}
+weight_yes <- (1/table(df_train$exceedance_class)["yes"]) * 0.5
+weight_no <- (1/table(df_train$exceedance_class)["no"]) * 0.5
+model_weights <- ifelse(
+  df_train$exceedance_class == "yes",
+  weight_yes,
+  weight_no
+)
+c(yes = weight_yes, no = weight_no, ratio = weight_yes / weight_no, sum = sum(model_weights))
+```
+
+```{r}
+m_glm_wt <- glm(exceedance ~ sqrt(precip_sum_p24hr_lag6hr), data = df_train, family = "binomial", weights = model_weights)
+summary(m_glm_wt)
+```
+
+**Does not work!**
+
+# `caret` Package
+
+### Train Control
+
+10-fold Cross-validation
+
+```{r}
+trControl <- trainControl(
+  method = "cv",
+  number = 10,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  returnResamp = "all"
+)
+```
+
+```{r}
+m_glm_cv10 <- train(
+  exceedance_class ~ precip_sum_p24hr_lag6hr,
+  data = df_train,
+  method = "glm",
+  family = "binomial",
+  metric = "ROC", # ["ROC", "Spec", "Sens"] <- returned from twoClassSummary
+  trControl = trControl
+)
+m_glm_cv10
+summary(m_glm_cv10)
+
+```
+
+Resamples
+
+```{r}
+m_glm_cv10$resample
+```
+
+Indices of samples left out of each fold
+
+```{r}
+m_glm_cv10$control$indexOut
+```
+
+```{r}
+m_glm_cv10$resampledCM
+```
+
+### Down Sampling
+
+Randomly remove instances in the majority class
+
+```{r}
+trControl_down <- trainControl(
+  method = "cv",
+  number = 10,
+  sampling = "down",
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  returnResamp = "all"
+)
+```
+
+```{r}
+m_glm_cv10_down <- train(
+  exceedance_class ~ precip_sum_p24hr_lag6hr,
+  data = df_train,
+  method = "glm",
+  family = "binomial",
+  metric = "ROC", # ["ROC", "Spec", "Sens"] <- returned from twoClassSummary
+  trControl = trControl_down
+)
+m_glm_cv10_down
+summary(m_glm_cv10_down)
+```
+
+Fitted dataset differs from `df_train` (much smaller, removes negatives)
+
+```{r}
+nrow(m_glm_cv10_down$finalModel$data)
+table(m_glm_cv10_down$finalModel$data$.outcome)
+```
+
+
+### Up Sampling
+
+Randomly replicate instances in the minority class
+
+```{r}
+trControl_up <- trainControl(
+  method = "cv",
+  number = 10,
+  sampling = "up",
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  returnResamp = "all"
+)
+```
+
+```{r}
+m_glm_cv10_up <- train(
+  exceedance_class ~ precip_sum_p24hr_lag6hr,
+  data = df_train,
+  method = "glm",
+  family = "binomial",
+  metric = "ROC", # ["ROC", "Spec", "Sens"] <- returned from twoClassSummary
+  trControl = trControl_up
+)
+m_glm_cv10_up
+summary(m_glm_cv10_up)
+```
+
+Fitted dataset much larger than `df_train` (added "yes" rows).
+
+```{r}
+nrow(m_glm_cv10_up$finalModel$data)
+table(m_glm_cv10_up$finalModel$data$.outcome)
+```
+
+```{r}
+pred_class <- predict(m_glm_cv10_up, newdata = df_test, type = "raw")
+confusionMatrix(
+  data = pred_class,
+  reference = df_test$exceedance_class,
+  positive = "yes"
+  # mode = "prec_recall"
+)
+```
+
+# Feature Selection
+
+## ROC Curve
+
+```{r}
+df_roc <- crossing(
+  model_id = names(models$ls),
+  var = names(models$ls$MYSTIC_ECOLI)[stringr::str_detect(names(models$ls$MYSTIC_ECOLI), "^precip_sum")]
+) %>%
+  mutate(
+    data = map2(model_id, var, function (id, v) {
+      df <- models$ls[[id]]
+      x <- sqrt(round(df[[v]], 5))
+      y <- df$exceedance
+      data_frame(x = x, y = y)
+    }),
+    frac_exceed = map_dbl(data, ~ mean(.$y)),
+    n_sample = map_int(data, nrow),
+    model = map(data, function (data) {
+      glm(y ~ x, data = data, family = "binomial")
+    }),
+    aic = map_dbl(model, "aic"),
+    roc = map2(model, data, function (m, d) {
+      p <- predict(m, newdata = d, type = "response")
+      roc <- pROC::roc(d$y, p)
+    }),
+    auc = map_dbl(roc, function (roc) {
+      auc <- pROC::auc(roc)
+      as.numeric(auc)
+    })
+  )
+
+```
+
+```{r}
+df_roc %>%
+  arrange(model_id, desc(auc)) %>%
+  group_by(model_id) %>%
+  filter(row_number() == 1) %>%
+  arrange(model_id) %>% 
+  dplyr::select(model_id, var, frac_exceed, n_sample, auc)
+```
