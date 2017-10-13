@@ -16,3 +16,15 @@ CREATE TABLE wunderground (
   json JSON
 );
 CREATE UNIQUE INDEX wunderground_idx_date ON wunderground (date);
+
+CREATE TABLE predictions (
+  id SERIAL PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  name TEXT,
+  uuid TEXT,
+  predictors JSON,
+  prob REAL,
+  exceedance BOOLEAN,
+  timestamp TIMESTAMP WITH TIME ZONE
+)
+CREATE UNIQUE INDEX predictions_idx_name_timestamp ON predictions (name, timestamp);
