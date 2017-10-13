@@ -36,3 +36,12 @@ psql -h <hostname> -p 5432 -U myrwa_admin -d recflag -f db/permissions.sql
 # install schema
 psql -h <hostname> -p 5432 -U myrwa_admin -d recflag -f schema.sql
 ```
+
+## Copy Data
+
+To copy data from one server to another, use `pg_dump`. May need to truncate table on target server.
+
+```bash
+pg_dump --host [SERVER 1] --username=[USER] --encoding=utf8 --no-owner -a -t [TABLE] recflag > server1-table.sql
+pgsql --host [SERVER 2] --username=[USER] -d recflag -f server1-table.sql
+```
