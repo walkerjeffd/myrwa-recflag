@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 
 const config = require('../config');
+const db = require('./db');
 
 const app = express();
 
@@ -47,6 +48,12 @@ app.get('/status/', (req, res, next) => {
   //   .then(result => res.status(200).json({ status: 'ok', data: result }))
   //   .catch(next);
   res.status(200).json({ status: 'ok', data: [] });
+});
+
+app.get('/predictions/', (req, res, next) => {
+  db.getPredictions()
+    .then(result => res.status(200).json({ status: 'ok', data: result }))
+    .catch(next);
 });
 
 // error handler
