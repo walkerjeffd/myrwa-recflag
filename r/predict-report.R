@@ -48,22 +48,22 @@ cat("Generating PDF (", fname, ")...")
 
 pdf(file.path("pdf", fname), width = 11, height = 8.5)
 
-p <- df_predict %>%
-  filter(timestamp >= (now() - days(10))) %>%
-  ggplot(aes(timestamp, prob, color = name)) +
-  geom_line() +
-  geom_hline(aes(yintercept = 0.2, linetype = "Cutoff")) +
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
-  scale_color_discrete("Model") +
-  scale_linetype_manual("", values = "dashed") +
-  facet_wrap(~ name, ncol = 1) +
-  labs(
-    x = "Date",
-    y = "Predicted Probability of Exceedance",
-    title = "Exceedance Predictions - Last 10 Days",
-    caption = updated_at
-  )
-print(p)
+# p <- df_predict %>%
+#   filter(timestamp >= (now() - days(10))) %>%
+#   ggplot(aes(timestamp, prob, color = name)) +
+#   geom_line() +
+#   geom_hline(aes(yintercept = 0.2, linetype = "Cutoff")) +
+#   scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+#   scale_color_discrete("Model") +
+#   scale_linetype_manual("", values = "dashed") +
+#   facet_wrap(~ name, ncol = 1) +
+#   labs(
+#     x = "Date",
+#     y = "Predicted Probability of Exceedance",
+#     title = "Exceedance Predictions - Last 10 Days",
+#     caption = updated_at
+#   )
+# print(p)
 
 p <- df_predict %>%
   ggplot(aes(timestamp, prob, color = name)) +
