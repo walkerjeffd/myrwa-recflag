@@ -10,6 +10,13 @@ Prepared for: [Mystic River Watershed Association](https://mysticriver.org)
 
 The MyRWA Recreational Flagging Project provides near real-time predictions of bacteria exceedences at locations within the Mystic River Watershed. This repo contains the source code for the database, models, and web applications.
 
+## Configuration
+
+```bash
+cp config/index.template.json config/index.json
+nano config/index.json
+```
+
 ## Database
 
 ### Set Up
@@ -70,6 +77,48 @@ Each morning, update yesterday's streamflow and wunderground data.
 ```bash
 node fetch.js streamflow 01102500 -P P1D
 node fetch.js wunderground -Y
+```
+
+## Prediction Models
+
+### Model Development
+
+Logistic regression models are developed using the `r/models.R` script. The results are saved to `r/models.rds`.
+
+### Model Execution
+
+To generate and save predictions for each model at the most recent timestamp, first update wunderground dataset for today.
+
+```bash
+cd fetch
+node fetch.js wunderground -T
+```
+
+Then run predict.R script with no arguments to use the latest available timestamp:
+
+```bash
+cd ../r
+Rscript predict.R
+```
+
+To generate and save predictions for a specific timestamp, pass in one argument:
+
+```bash
+Rscript predict.R "YYYY-mm-dd HH:MM"
+# or
+Rscript predict.R YYYYmmddHHMM
+# example
+Rscript predict.R 201710010700
+```
+
+To generate and save predictions for a range of timestamps, pass in three arguments (start, end, interval):
+
+```bash
+Rscript predict.R "YYYY-mm-dd HH:MM" "YYYY-mm-dd HH:MM" "interval"
+# or
+Rscript predict.R YYYYmmddHHMM YYYYmmddHHMM interval
+# example
+Rscript predict.R 201705010700 201710010700 day
 ```
 
 ## Web Applications

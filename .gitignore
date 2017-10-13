@@ -1,7 +1,7 @@
 node_modules/
 
-config/*.js
-!config/index.template.js
+config/*.json
+!config/index.template.json
 
 apps/config/*.js
 !apps/config/index.template.js

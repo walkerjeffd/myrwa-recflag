@@ -288,10 +288,7 @@ df_out <- df_hour %>%
     select(df_precip, timestamp, event_type, starts_with("hours_since"), starts_with("precip_")),
     by = "timestamp"
   ) %>%
-  select(date, timestamp, everything()) %>%
-  mutate(
-    timestamp =
-  )
+  select(date, timestamp, everything())
 
 df_out %>%
   write_csv("data/weather.csv")
