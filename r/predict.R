@@ -6,7 +6,7 @@
 #    Rscript predict.R "2017-05-01 07:00" "2017-10-13 07:00" "day" (range of timestamps)
 
 args = commandArgs(trailingOnly=TRUE)
-# args <- c("201710010700", "201710100700", "day")
+
 right_now <- lubridate::now(tzone = "US/Eastern")
 
 cat("Booting:", paste0(right_now), "\n")
