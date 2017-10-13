@@ -1,31 +1,18 @@
 -- MyRWA Recreational Flagging Database
 
-CREATE TABLE locations (
-  id TEXT PRIMARY KEY,
-  location_description TEXT,
-  latitude REAL,
-  longitude REAL
-);
-
 CREATE TABLE streamflow (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   station_id TEXT,
-  datetime TIMESTAMP WITH TIME ZONE,
+  date DATE,
   flow REAL
 );
-
-CREATE TABLE darksky (
-  id SERIAL PRIMARY KEY,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  datetime TIMESTAMP WITH TIME ZONE,
-  values JSON
-);
+CREATE UNIQUE INDEX streamflow_idx_date_flow ON streamflow (station_id, date);
 
 CREATE TABLE wunderground (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   date DATE,
-  data JSON
+  json JSON
 );
-
+CREATE UNIQUE INDEX wunderground_idx_date ON wunderground (date);
