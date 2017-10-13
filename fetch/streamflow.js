@@ -9,7 +9,7 @@ const knex = require('knex')({
 
 // functions ------------------------------------------------------------------
 
-function parseNwisResponse(response) {
+function parseResponse(response) {
   if (response.status !== 200) {
     throw new Error(`Response status is not 200 (${response.status})`);
   }
@@ -37,13 +37,13 @@ function convertValueObjects(rawData) {
   const values = rawData.values.map((d) => {
     return {
       station_id: stationId,
-      datetime: new Date(d.dateTime),
+      date: d.dateTime.substr(0, 10),
       flow: +d.value
     };
   });
 
   if (values.length > 0) {
-    logger.info(`received ${values.length} values (start = ${values[0].datetime.toISOString()}, end = ${values[values.length - 1].datetime.toISOString()})`);
+    logger.info(`received ${values.length} values (start = ${values[0].date}, end = ${values[values.length - 1].date})`);
   } else {
     logger.info('received no raw values');
   }
@@ -54,33 +54,33 @@ function convertValueObjects(rawData) {
   };
 }
 
-function filterByTimestamp(data) {
-  // get latest timestamp in database
-  return knex('streamflow')
-    .select()
-    .where('station_id', data.stationId)
-    .orderBy('datetime', 'desc')
-    .limit(1)
-    .then((rows) => {
-      let values = data.values;
+// function filterByTimestamp(data) {
+//   // get latest timestamp in database
+//   return knex('streamflow')
+//     .select()
+//     .where('station_id', data.stationId)
+//     .orderBy('datetime', 'desc')
+//     .limit(1)
+//     .then((rows) => {
+//       let values = data.values;
 
-      if (rows.length > 0) {
-        const lastTimestamp = rows[0].datetime;
-        logger.info(`last database timestamp = ${lastTimestamp.toISOString()}`);
-        values = values.filter(d => d.datetime > lastTimestamp);
-      } else {
-        logger.info('no existing data in database');
-      }
+//       if (rows.length > 0) {
+//         const lastTimestamp = rows[0].datetime;
+//         logger.info(`last database timestamp = ${lastTimestamp.toISOString()}`);
+//         values = values.filter(d => d.datetime > lastTimestamp);
+//       } else {
+//         logger.info('no existing data in database');
+//       }
 
-      return {
-        stationId: data.stationId,
-        values
-      };
-    });
-}
+//       return {
+//         stationId: data.stationId,
+//         values
+//       };
+//     });
+// }
 
 function saveToDatabase(data) {
-  if (data.length === 0) {
+  if (data.values.length === 0) {
     logger.info('no new values to save');
   }
 
@@ -97,22 +97,31 @@ function saveToDatabase(data) {
 }
 
 function fetch(params) {
+  const urlParams = {
+    format: 'json',
+    sites: params.stationId,
+    parameterCd: '00060'
+  };
+
+  if (params.period) {
+    urlParams.period = params.period;
+  } else if (params.start && params.end) {
+    urlParams.startDT = params.start;
+    urlParams.endDT = params.end;
+  } else {
+    return Promise.reject('Missing period or start/end parameters');
+  }
+
   const request = {
     method: 'get',
-    url: 'https://waterservices.usgs.gov/nwis/iv/',
-    params: {
-      format: 'json',
-      sites: params.stationId,
-      period: params.period,
-      parameterCd: '00060',
-      siteStatus: 'all'
-    }
+    url: 'https://waterservices.usgs.gov/nwis/dv/',
+    params: urlParams
   };
 
   return axios.request(request)
-    .then(parseNwisResponse)
+    .then(parseResponse)
     .then(convertValueObjects)
-    .then(filterByTimestamp)
+    // .then(filterByTimestamp)
     .then(saveToDatabase);
 }
 

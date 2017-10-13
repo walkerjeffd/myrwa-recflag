@@ -1,6 +1,8 @@
 const axios = require('axios');
-const moment = require('moment-timezone');
-const Promise = require('bluebird');
+const Moment = require('moment-timezone');
+const MomentRange = require('moment-range');
+
+const moment = MomentRange.extendMoment(Moment);
 
 const logger = require('./logger');
 const config = require('../config');
@@ -13,22 +15,61 @@ const knex = require('knex')({
 
 // functions ------------------------------------------------------------------
 
-function saveToDatabase(data) {
+function insertDatabase(data) {
   if (!data) {
     logger.info('no new data to save');
   }
 
   return knex('wunderground')
     .insert(data)
+    .returning(['id', 'date'])
     .then((result) => {
       // logger.info(result);
 
-      if (result.rowCount) {
-        logger.info(`saved ${result.rowCount} new records to database`);
+      if (result.length > 0) {
+        logger.info(`saved ${result.length} record to database (id=${result[0].id}, date=${result[0].date.toISOString().substr(0, 10)})`);
       } else {
         logger.info('no data saved to database');
       }
       return result;
+    });
+}
+
+function updateDatabase(data) {
+  return knex('wunderground')
+    .where('date', data.date)
+    .update('json', data.json)
+    .returning('*')
+    .then((result) => {
+      if (result.length > 0) {
+        logger.info(`saved ${result.length} record to database (id=${result[0].id}, date=${result[0].date.toISOString().substr(0, 10)})`);
+      } else {
+        logger.info('no data saved to database');
+      }
+      return result;
+    });
+}
+
+function upsertDatabase(data) {
+  if (!data) {
+    logger.info('missing data for upsert');
+    return Promise.reject('data is undefined');
+  }
+
+  return knex('wunderground')
+    .where('date', data.date)
+    .count('*')
+    .then((results) => {
+      const count = +results[0].count;
+      let promise;
+      if (count > 0) {
+        logger.info(`row with date=${data.date} already exists, updating`);
+        promise = updateDatabase(data);
+      } else {
+        logger.info(`row with date=${data.date} does not already exist, inserting`);
+        promise = insertDatabase(data);
+      }
+      return promise;
     });
 }
 
@@ -43,7 +84,7 @@ function createRequest(key, date) {
     url
   };
 
-  return axios.request(request);
+  return request;
 }
 
 function handleResponse(response) {
@@ -63,26 +104,16 @@ function fetch(params) {
   const date = params.date;
   const request = createRequest(key, date);
 
-  return request
+  return axios.request(request)
     .then(handleResponse)
     .then((data) => {
       return {
         date,
-        data
+        json: data
       };
     })
-    .then(saveToDatabase);
+    .then(upsertDatabase);
 }
-
-// fetch({ date: '2017-09-22' })
-//   .then(() => {
-//     logger.info('done');
-//     process.exit(0);
-//   })
-//   .catch((err) => {
-//     logger.error(err);
-//     process.exit(1);
-//   });
 
 // export ---------------------------------------------------------------------
 module.exports = {
