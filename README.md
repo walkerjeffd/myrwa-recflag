@@ -121,6 +121,27 @@ Rscript predict.R YYYYmmddHHMM YYYYmmddHHMM interval
 Rscript predict.R 201705010700 201710010700 day
 ```
 
+## Crontab
+
+Daily cron:
+
+```
+# recflag: fetch streamflow at 11:00 AM UTC (7:00 AM EDT)
+0 11 * * * cd /home/myrwa/apps/myrwa-recflag/fetch && node fetch.js streamflow 01102500 -P P1D >> /home/myrwa/logs/recflag/fetch-streamflow.lo$
+
+# recflag: fetch wunderground yesterday at 9:10 AM UTC (5:10 AM EDT)
+10 9 * * * cd /home/myrwa/apps/myrwa-recflag/fetch && node fetch.js wunderground -Y >> /home/myrwa/logs/recflag/fetch-wunderground.log 2>&1
+
+# recflag: fetch wunderground today at 11:00 AM UTC (7:00 AM EDT)
+0 11 * * * cd /home/myrwa/apps/myrwa-recflag/fetch && node fetch.js wunderground -T >> /home/myrwa/logs/recflag/fetch-wunderground.log 2>&1
+
+# recflag: make prediction at 11:05 AM UTC (7:05 AM EDT)
+5 11 * * * cd /home/myrwa/apps/myrwa-recflag/r && Rscript predict.R >> /home/myrwa/logs/recflag/r-predict.log 2>&1
+
+# recflag: make prediction report at 11:10 AM UTC (7:10 AM EDT)
+10 11 * * * cd /home/myrwa/apps/myrwa-recflag/r && Rscript predict-report.R >> /home/myrwa/logs/recflag/r-predict-report.log 2>&1
+```
+
 ## Web Applications
 
 ### Map
