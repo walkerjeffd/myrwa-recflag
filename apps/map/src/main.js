@@ -91,6 +91,13 @@ window.onload = () => {
   });
   map.addControl(sidebar);
 
+  const sidebarCloseButton = sidebar.getCloseButton();
+
+  // workaround for non-firing "click" events
+  sidebarCloseButton.addEventListener('mousedown', () => {
+    sidebar.hide();
+  });
+
   // fetch data
   $.get(config.api.url + 'predictions/', (response) => {
     const data = response.data;
@@ -117,9 +124,12 @@ window.onload = () => {
           icon = icons.gray;
           break;
       }
-      L.marker([d.site.latitude, d.site.longitude], { icon }).addTo(map)
-        .on('click', () => {
-          console.log('clicked: ', d.id);
+      L.marker([d.site.latitude, d.site.longitude], {
+        icon
+      }).addTo(map)
+        .on('mousedown', () => {
+          // workaround for non-firing "click" events
+          console.log('clicked: ', d.name);
           if (sidebar.isVisible()) {
             sidebar.hide();
           }
