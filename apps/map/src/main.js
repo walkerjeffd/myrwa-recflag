@@ -12,21 +12,7 @@ require('leaflet-sidebar/src/L.Control.Sidebar.css');
 
 const config = require('../../config');
 
-const siteInfo = {
-  MYSTIC_ECOLI: {
-    name: 'Mystic River',
-    description: 'Mystic Valley Parkway (Rt 16)'
-  },
-  MALDENLOWER_ECOLI: {
-    name: 'Malden River',
-    description: 'Revere Beach Parkway (Rt 16)'
-  },
-  SHANNON_ENT: {
-    name: 'Upper Mystic Lake',
-    description: 'Shannon Beach'
-  }
-};
-
+// templates
 const cardTemplate = `
 <div class="recflag-card-status recflag-status-{%=o.current.status.type%}">
   <div class="recflag-card-status-title">Status: <span class="recflag-card-status-title-type">{%=o.current.status.label%}</span></div>
@@ -61,6 +47,7 @@ const sidebarTemplate = `
 </table>
 `;
 
+// map icons
 const icons = {
   green: L.icon({
     iconUrl: `${config.api.url}static/map/img/marker-green-2x.png`,
@@ -89,6 +76,7 @@ const icons = {
 };
 
 window.onload = () => {
+  // set up map
   const map = L.map('recflag-map').setView([42.42624, -71.09630], 12);
 
   L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
@@ -103,10 +91,12 @@ window.onload = () => {
   });
   map.addControl(sidebar);
 
+  // fetch data
   $.get(config.api.url + 'predictions/', (response) => {
     const data = response.data;
     console.log(data);
 
+    // for each site
     data.forEach((d) => {
       // update cards
       $(`#recflag-card-${d.name}`).html(tmpl(cardTemplate, d));
@@ -140,5 +130,73 @@ window.onload = () => {
           }, 200);
         });
     });
+  })
+  .fail(() => {
+    // unable to get data from server
+    const data = [
+      {
+        name: 'MYSTIC_ECOLI',
+        site: {
+          name: 'Mystic River',
+          description: 'Mystic Valley Parkway (Rt 16)',
+          latitude: 42.405722,
+          longitude: -71.096351
+        },
+        current: {
+          timestamp_local: 'Not Available',
+          status: {
+            type: 'unknown',
+            label: 'Not Available',
+            reason: 'Unable to get data from the server.'
+          }
+        },
+        history: []
+      },
+      {
+        name: 'MALDENLOWER_ECOLI',
+        site: {
+          name: 'Malden River',
+          description: 'Revere Beach Parkway (Rt 16)',
+          latitude: 42.4053,
+          longitude: -71.07191
+        },
+        current: {
+          timestamp_local: 'Not Available',
+          status: {
+            type: 'unknown',
+            label: 'Not Available',
+            reason: 'Unable to get data from the server.'
+          }
+        },
+        history: []
+      },
+      {
+        name: 'SHANNON_ENT',
+        site: {
+          name: 'Upper Mystic Lake',
+          description: 'Shannon Beach',
+          latitude: 42.439892,
+          longitude: -71.146153
+        },
+        current: {
+          timestamp_local: 'Not Available',
+          status: {
+            type: 'unknown',
+            label: 'Not Available',
+            reason: 'Unable to get data from the server.'
+          }
+        },
+        history: []
+      }
+    ];
+
+    data.forEach((d) => {
+      // update cards
+      $(`#recflag-card-${d.name}`).html(tmpl(cardTemplate, d));
+    });
+
+    setTimeout(() => {
+      alert('System error occurred. Unable to retrieve current data. Please contact us at contact@mysticriver.org if the problem persists.');
+    }, 500);
   });
 };
