@@ -12,17 +12,52 @@ require('leaflet-sidebar/src/L.Control.Sidebar.css');
 const config = require('../../config');
 
 const sidebarTemplate = `
-<h3>{%=o.description%}</h3>
-<p>
-  Risk Level: {%=o.risk%}<br>
-  Reason: {%=o.reason%}<br>
-  Recreation: {%=o.standard%}
-</p>
-<h4>Risk History</h4>
-<img src="${config.api.url}static/map/img/risk-timeseries.png" width=400 height=50></img>
-<p>Risk levels over the past 5 days</p>
-<h4>Station Photo</h4>
-<img src="${config.api.url}static/map/img/stn-image.png" width=400 height=250></img>
+<h2>{%=o.name%}</h2>
+<h3 style="margin-top:0">{%=o.description%}</h3>
+
+<p><strong>Status</strong>: <strong class="{%=o.status_class%}" style="font-size:1.4em;padding:4px">{%=o.status%}</strong></p>
+<p><strong>Reason</strong>: {%=o.reason%}</p>
+<p><strong>Last Updated</strong>: {%=o.timestamp%}</p>
+
+<h4>Past 7 Days</h4>
+<table class="pure-table">
+  <thead>
+    <tr>
+      <th>Date/Time</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>10/16/2017 07:00 EDT</td>
+      <td class="recflag-status-good">Good</td>
+    </tr>
+    <tr>
+      <td>10/15/2017 07:00 EDT</td>
+      <td class="recflag-status-good">Good</td>
+    </tr>
+    <tr>
+      <td>10/14/2017 07:00 EDT</td>
+      <td class="recflag-status-advisory">Advisory</td>
+    </tr>
+    <tr>
+      <td>10/13/2017 07:00 EDT</td>
+      <td class="recflag-status-advisory">Advisory</td>
+    </tr>
+    <tr>
+      <td>10/12/2017 07:00 EDT</td>
+      <td class="recflag-status-uncertain">Uncertain</td>
+    </tr>
+    <tr>
+      <td>10/11/2017 07:00 EDT</td>
+      <td class="recflag-status-unknown">Not Available</td>
+    </tr>
+    <tr>
+      <td>10/10/2017 07:00 EDT</td>
+      <td class="recflag-status-good">Good</td>
+    </tr>
+  </tbody>
+</table>
 `;
 
 const icons = {
@@ -54,76 +89,49 @@ const icons = {
 
 const sites = [
   {
-    id: 'MAR036',
-    description: 'Malden River at Medford St Bridge',
-    latitude: 42.4175,
-    longitude: -71.073283,
-    waterbody: 'Malden River',
-    parameter: 'ECOLI',
-    risk: 'Low',
-    standard: 'Boating',
-    reason: 'No expected bacteria exceedances',
-    updated: ''
-  }, {
-    id: 'MWRA176',
-    description: 'Malden River at Rt 16 Bridge',
+    id: 'MALDENLOWER_ECOLI',
+    name: 'Malden River',
+    description: 'Revere Beach Parkway (Rt 16)',
     latitude: 42.4053,
     longitude: -71.07191,
     WaterBodyID: 'Malden River',
     parameter: 'ECOLI',
-    risk: 'Low',
+    status: 'Good',
+    status_class: 'recflag-status-good',
     standard: 'Boating',
     reason: 'No expected bacteria exceedances',
-    updated: ''
+    timestamp: 'October 16, 2017 07:00 (EDT)'
   }, {
-    id: 'MYR0435',
-    description: 'Mystic River at Rt 16 Bridge',
+    id: 'MYSTIC_ECOLI',
+    name: 'Mystic River',
+    description: 'Mystic Valley Parkway (Rt 16)',
     latitude: 42.405722,
     longitude: -71.096351,
     WaterBodyID: 'Mystic River (Fresh)',
     parameter: 'ECOLI',
-    risk: 'High',
+    status: 'Advisory',
+    status_class: 'recflag-status-advisory',
     standard: 'Boating',
     reason: 'High chance of bacteria levels above the boating standard',
-    updated: ''
+    timestamp: 'October 16, 2017 07:00 (EDT)'
   }, {
-    id: 'MYRBOBDOCK',
-    description: 'Blessing of the Bay Boathouse',
-    latitude: 42.3987,
-    longitude: -71.090461,
-    WaterBodyID: 'Mystic River (Fresh)',
-    parameter: 'ECOLI',
-    risk: 'High',
-    standard: 'Boating',
-    reason: 'High chance of bacteria levels above the boating standard',
-    updated: ''
-  }, {
-    id: 'WEPBCHC',
-    description: 'Wedge Pond Beach',
-    latitude: 42.453883,
-    longitude: -71.142985,
-    WaterBodyID: 'Wedge Pond',
-    parameter: 'ECOLI',
-    risk: 'Medium',
-    standard: 'Swimming',
-    reason: 'Unconfirmed cyanobacteria bloom',
-    updated: ''
-  }, {
-    id: 'UPLSHBM',
+    id: 'SHANNON_ENT',
+    name: 'Upper Mystic Lake',
     description: 'Shannon Beach',
     latitude: 42.439892,
     longitude: -71.146153,
     WaterBodyID: 'Upper Mystic Lake',
     parameter: 'ECOLI',
-    risk: 'Unknown',
+    status: 'Uncertain',
+    status_class: 'recflag-status-uncertain',
     standard: 'Swimming',
-    reason: 'Rainfall data not available',
-    updated: ''
+    reason: 'Possible cyanobacteria bloom (unconfirmed)',
+    timestamp: 'October 16, 2017 07:00 (EDT)'
   }
 ];
 
 window.onload = () => {
-  const map = L.map('recflag-map').setView([42.42624, -71.09630], 13);
+  const map = L.map('recflag-map').setView([42.42624, -71.09630], 12);
 
   L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
@@ -141,14 +149,14 @@ window.onload = () => {
 
   sites.forEach((site) => {
     let icon = icons.gray;
-    switch (site.risk) {
-      case 'Low':
+    switch (site.status) {
+      case 'Good':
         icon = icons.green;
         break;
-      case 'Medium':
+      case 'Uncertain':
         icon = icons.yellow;
         break;
-      case 'High':
+      case 'Advisory':
         icon = icons.red;
         break;
       default:
