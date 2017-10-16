@@ -9,6 +9,7 @@ const moment = require('moment-timezone');
 
 const config = require('../config');
 const db = require('./db');
+const utils = require('../utils');
 
 const app = express();
 
@@ -46,49 +47,6 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: 'ok', data: [] });
 });
 
-function assignStatus(prediction) {
-  let type = 'unknown';
-  let label = 'Not Available';
-  let reason = 'Data unavailable or system error';
-
-  if (_.isNull(prediction.exceedance) || _.isUndefined(prediction.exceedance)) {
-    type = 'unknown';
-    label = 'Not Available';
-    reason = 'Data unavailable or system error.';
-  } else if (prediction.exceedance) {
-    type = 'advisory';
-    label = 'Advisory';
-    reason = 'High probability of elevated bacteria levels.';
-  } else {
-    type = 'good';
-    label = 'Good';
-    reason = 'Low probability of elevated bacteria levels.';
-  }
-
-  return { type, label, reason };
-}
-
-const sites = {
-  MYSTIC_ECOLI: {
-    name: 'Mystic River',
-    description: 'Mystic Valley Parkway (Rt 16)',
-    latitude: 42.405722,
-    longitude: -71.096351
-  },
-  MALDENLOWER_ECOLI: {
-    name: 'Malden River',
-    description: 'Revere Beach Parkway (Rt 16)',
-    latitude: 42.4053,
-    longitude: -71.07191
-  },
-  SHANNON_ENT: {
-    name: 'Upper Mystic Lake',
-    description: 'Shannon Beach',
-    latitude: 42.439892,
-    longitude: -71.146153
-  }
-};
-
 app.get('/predictions/', (req, res, next) => {
   db.getPredictions()
     .then((results) => {
@@ -112,16 +70,16 @@ app.get('/predictions/', (req, res, next) => {
       const data = names.map((name) => {
         const d = {
           name,
-          site: sites[name],
+          site: utils.sites[name],
           current: results.filter(p => p.name === name)[0],
           history: results.filter(p => p.name === name),
           flags: []
         };
 
         // assign status
-        d.current.status = assignStatus(d.current, d.flags);
+        d.current.status = utils.assignStatus(d.current, d.flags);
         d.history.forEach((p) => {
-          p.status = assignStatus(p, d.flags);
+          p.status = utils.assignStatus(p, d.flags);
         });
         return d;
       });
