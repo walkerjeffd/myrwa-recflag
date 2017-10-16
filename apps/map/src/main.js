@@ -1,5 +1,6 @@
 const tmpl = require('blueimp-tmpl');
 const L = require('leaflet');
+const $ = require('jquery');
 
 L.Icon.Default.imagePath = 'dist/img/';
 
@@ -11,13 +12,35 @@ require('leaflet-sidebar/src/L.Control.Sidebar.css');
 
 const config = require('../../config');
 
-const sidebarTemplate = `
-<h2>{%=o.name%}</h2>
-<h3 style="margin-top:0">{%=o.description%}</h3>
+const siteInfo = {
+  MYSTIC_ECOLI: {
+    name: 'Mystic River',
+    description: 'Mystic Valley Parkway (Rt 16)'
+  },
+  MALDENLOWER_ECOLI: {
+    name: 'Malden River',
+    description: 'Revere Beach Parkway (Rt 16)'
+  },
+  SHANNON_ENT: {
+    name: 'Upper Mystic Lake',
+    description: 'Shannon Beach'
+  }
+};
 
-<p><strong>Status</strong>: <strong class="{%=o.status_class%}" style="font-size:1.4em;padding:4px">{%=o.status%}</strong></p>
-<p><strong>Reason</strong>: {%=o.reason%}</p>
-<p><strong>Last Updated</strong>: {%=o.timestamp%}</p>
+const cardTemplate = `
+<div class="recflag-card-status recflag-status-{%=o.current.status.type%}">
+  <div class="recflag-card-status-title">Status: <span class="recflag-card-status-title-type">{%=o.current.status.label%}</span></div>
+  <div class="recflag-card-status-reason">{%=o.current.status.reason%}</div>
+</div>
+`;
+
+const sidebarTemplate = `
+<h2>{%=o.site.name%}</h2>
+<h3 style="margin-top:0">{%=o.site.description%}</h3>
+
+<p><strong>Status</strong>: <strong class="recflag-status-{%=o.current.status.type%}" style="font-size:1.4em;padding:4px">{%=o.current.status.label%}</strong></p>
+<p><strong>Reason</strong>: {%=o.current.status.reason%}</p>
+<p><strong>Last Updated</strong>: {%=o.current.timestamp_local%}</p>
 
 <h4>Past 7 Days</h4>
 <table class="pure-table">
@@ -28,34 +51,12 @@ const sidebarTemplate = `
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>10/16/2017 07:00 EDT</td>
-      <td class="recflag-status-good">Good</td>
+    {% for (var i=0; i<o.history.length; i++) { %}
+      <tr>
+      <td>{%=o.history[i].timestamp_local%}</td>
+      <td class="recflag-status-{%=o.history[i].status.type%}">{%=o.history[i].status.label%}</td>
     </tr>
-    <tr>
-      <td>10/15/2017 07:00 EDT</td>
-      <td class="recflag-status-good">Good</td>
-    </tr>
-    <tr>
-      <td>10/14/2017 07:00 EDT</td>
-      <td class="recflag-status-advisory">Advisory</td>
-    </tr>
-    <tr>
-      <td>10/13/2017 07:00 EDT</td>
-      <td class="recflag-status-advisory">Advisory</td>
-    </tr>
-    <tr>
-      <td>10/12/2017 07:00 EDT</td>
-      <td class="recflag-status-uncertain">Uncertain</td>
-    </tr>
-    <tr>
-      <td>10/11/2017 07:00 EDT</td>
-      <td class="recflag-status-unknown">Not Available</td>
-    </tr>
-    <tr>
-      <td>10/10/2017 07:00 EDT</td>
-      <td class="recflag-status-good">Good</td>
-    </tr>
+    {% } %}
   </tbody>
 </table>
 `;
@@ -87,56 +88,12 @@ const icons = {
   })
 };
 
-const sites = [
-  {
-    id: 'MALDENLOWER_ECOLI',
-    name: 'Malden River',
-    description: 'Revere Beach Parkway (Rt 16)',
-    latitude: 42.4053,
-    longitude: -71.07191,
-    WaterBodyID: 'Malden River',
-    parameter: 'ECOLI',
-    status: 'Good',
-    status_class: 'recflag-status-good',
-    standard: 'Boating',
-    reason: 'No expected bacteria exceedances',
-    timestamp: 'October 16, 2017 07:00 (EDT)'
-  }, {
-    id: 'MYSTIC_ECOLI',
-    name: 'Mystic River',
-    description: 'Mystic Valley Parkway (Rt 16)',
-    latitude: 42.405722,
-    longitude: -71.096351,
-    WaterBodyID: 'Mystic River (Fresh)',
-    parameter: 'ECOLI',
-    status: 'Advisory',
-    status_class: 'recflag-status-advisory',
-    standard: 'Boating',
-    reason: 'High chance of bacteria levels above the boating standard',
-    timestamp: 'October 16, 2017 07:00 (EDT)'
-  }, {
-    id: 'SHANNON_ENT',
-    name: 'Upper Mystic Lake',
-    description: 'Shannon Beach',
-    latitude: 42.439892,
-    longitude: -71.146153,
-    WaterBodyID: 'Upper Mystic Lake',
-    parameter: 'ECOLI',
-    status: 'Uncertain',
-    status_class: 'recflag-status-uncertain',
-    standard: 'Swimming',
-    reason: 'Possible cyanobacteria bloom (unconfirmed)',
-    timestamp: 'October 16, 2017 07:00 (EDT)'
-  }
-];
-
 window.onload = () => {
   const map = L.map('recflag-map').setView([42.42624, -71.09630], 12);
 
   L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
-
   // L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
 
   const sidebar = L.control.sidebar('recflag-sidebar', {
@@ -146,34 +103,42 @@ window.onload = () => {
   });
   map.addControl(sidebar);
 
+  $.get(config.api.url + 'predictions/', (response) => {
+    const data = response.data;
+    console.log(data);
 
-  sites.forEach((site) => {
-    let icon = icons.gray;
-    switch (site.status) {
-      case 'Good':
-        icon = icons.green;
-        break;
-      case 'Uncertain':
-        icon = icons.yellow;
-        break;
-      case 'Advisory':
-        icon = icons.red;
-        break;
-      default:
-        icon = icons.gray;
-        break;
-    }
-    L.marker([site.latitude, site.longitude], { icon }).addTo(map)
-      .on('click', () => {
-        console.log('clicked: ', site);
-        if (sidebar.isVisible()) {
-          sidebar.hide();
-        }
+    data.forEach((d) => {
+      // update cards
+      $(`#recflag-card-${d.name}`).html(tmpl(cardTemplate, d));
 
-        setTimeout(() => {
-          sidebar.setContent(tmpl(sidebarTemplate, site));
-          sidebar.show();
-        }, 200);
-      });
+      // add map markers
+      let icon = icons.gray;
+      switch (d.current.status.type) {
+        case 'good':
+          icon = icons.green;
+          break;
+        case 'uncertain':
+          icon = icons.yellow;
+          break;
+        case 'advisory':
+          icon = icons.red;
+          break;
+        default:
+          icon = icons.gray;
+          break;
+      }
+      L.marker([d.site.latitude, d.site.longitude], { icon }).addTo(map)
+        .on('click', () => {
+          console.log('clicked: ', d.id);
+          if (sidebar.isVisible()) {
+            sidebar.hide();
+          }
+
+          setTimeout(() => {
+            sidebar.setContent(tmpl(sidebarTemplate, d));
+            sidebar.show();
+          }, 200);
+        });
+    });
   });
 };

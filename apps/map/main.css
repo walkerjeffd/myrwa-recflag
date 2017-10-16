@@ -12,6 +12,10 @@ h2.recflag-card-title {
   margin-top: 6px;
 }
 
+h2.recflag-card-title > .recflag-card-status-title-type {
+  text-transform: uppercase;
+}
+
 h3.recflag-card-subtitle {
   font-size: 1.1em;
   margin-top: -2px;
