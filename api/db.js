@@ -9,8 +9,7 @@ function getPredictions() {
   const count = knex('predictions')
     .select()
     .orderBy('timestamp', 'desc')
-    .limit(3);
-
+    .whereRaw("date_trunc('day', timestamp at time zone 'US/Eastern') >= (date_trunc('day', now() at time zone 'US/Eastern') - interval '6 days')");
   return count;
 }
 

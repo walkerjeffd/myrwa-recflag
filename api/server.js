@@ -4,6 +4,7 @@ const fs = require('fs');
 const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+const _ = require('lodash');
 
 const config = require('../config');
 const db = require('./db');
@@ -44,16 +45,22 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: 'ok', data: [] });
 });
 
-app.get('/status/', (req, res, next) => {
-  // db.getStatus()
-  //   .then(result => res.status(200).json({ status: 'ok', data: result }))
-  //   .catch(next);
-  res.status(200).json({ status: 'ok', data: [] });
-});
-
 app.get('/predictions/', (req, res, next) => {
   db.getPredictions()
-    .then(result => res.status(200).json({ status: 'ok', data: result }))
+    .then((result) => {
+      const names = _.uniq(result.map(d => d.name));
+
+      const data = names.map((name) => {
+        return {
+          name,
+          current: result.filter(d => d.name === name)[0],
+          history: result.filter(d => d.name === name)
+        };
+      });
+
+      return data;
+    })
+    .then(data => res.status(200).json({ status: 'ok', data }))
     .catch(next);
 });
 
