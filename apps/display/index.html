@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mystic Daily Advisory</title>
+  <link rel="stylesheet" href="main.css">
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="container">
+  <div class="title-banner">
+    <h1>TODAY'S WATER QUALITY CONDITIONS</h1>
+  </div>
+
+  <div class="status-banner">
+    <h1>Mystic River: <span id="status-MYSTIC_ECOLI">Loading...</span></h1>
+    <h1>Malden River: <span id="status-MALDENLOWER_ECOLI">Loading...</span></h1>
+    <h1>Shannon Beach: <span id="status-SHANNON_ENT">Loading...</span></h1>
+  </div>
+
+  <div class="lower-right">
+    <p><em>Updated: <span id="status-updated">Loading...</span></em></p>
+    <p>
+      Mystic River Watershed Association <br>
+      https://mysticriver.org/recreationadvisory <br>
+      Twitter: @SafeMystic
+    </p>
+  </div>
+
+  <div class="lower-left">
+    <img src="img/logos.png" alt="">
+  </div>
+</div>
+
+<script>
+
+$(document).ready(function () {
+  $.get('https://myrwa-api.org/api/recflag/predictions/', function (response) {
+    var data = response.data;
+
+    data.forEach(function (d) {
+      $('#status-' + d.name).text(d.current.status.label);
+    });
+
+    $('#status-updated').text(data[0].current.timestamp_local);
+  });
+});
+
+</script>
+
+</body>
+</html>

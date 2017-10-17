@@ -1,0 +1,62 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: arial, sans-serif;
+}
+html {
+  background: url(img/background.jpg) no-repeat center center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+
+.container {
+  position: relative;
+}
+
+.title-banner {
+  font-size: 2em;
+  position: fixed;
+  top: 2.5%;
+  width: 90%;
+  margin-left: 5%;
+  margin-right: 5%;
+  background-color: rgba(158, 196, 231, 0.8);
+  text-align: center;
+  border-radius: 20px;
+}
+
+.status-banner {
+  font-size: 1.6em;
+  position: fixed;
+  top: 25%;
+  background-color: rgba(255, 255, 255, 0.5);
+  width: 90%;
+  margin-left: 5%;
+  margin-right: 5%;
+  text-align: center;
+  border-radius: 20px;
+}
+
+.lower-right {
+  position: fixed;
+  right: 5%;
+  bottom: 10px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.5);
+  text-align: right;
+  font-weight: bold;
+  border-radius: 20px;
+  font-size: 1.2em;
+}
+
+.lower-left {
+  position: fixed;
+  left: 5%;
+  bottom: 10px;
+  padding: 0;
+  margin: 0;
+  background-color: white;
+}
