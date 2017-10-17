@@ -142,7 +142,7 @@ export default {
           },
           {
             id: 2,
-            start: '2017-10-7 12:15',
+            start: '2017-10-07 12:15',
             end: '2017-10-10 18:25',
             location_id: 'MYSTIC_ECOLI',
             location_shortname: 'Mystic River (Rt 16)',
