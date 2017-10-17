@@ -38,6 +38,7 @@ app.use(allowCrossDomain);
 // paths to app builds
 app.use('/static/map', express.static('../apps/map/dist'));
 app.use('/reports', express.static('../r/pdf'));
+app.use('/display', express.static('../apps/display'));
 
 // pages
 // app.use('/www/', express.static('./www/'));
