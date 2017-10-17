@@ -1,7 +1,7 @@
 {
   "name": "recflag-admin",
   "description": "RecFlag Admin Page",
-  "author": "Jeff Walker <walker.jeff.d@gmail.com>",
+  "author": "Jeff Walker <jeff@walkerenvres.com>",
   "private": true,
   "scripts": {
     "watchify": "watchify -vd -t browserify-css -e src/main.js -o dist/build.js",

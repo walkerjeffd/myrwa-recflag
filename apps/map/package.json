@@ -1,9 +1,10 @@
 {
-  "name": "recflag",
+  "name": "recflag-map",
   "version": "0.0.1",
   "description": "MyRWA Recreational Flagging Website",
   "author": "Jeff Walker <jeff@walkerenvres.com>",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "watchify": "NODE_ENV=development watchify -vd -g browserify-css -e src/main.js -o dist/build-dev.js",
     "serve": "http-server -o -s -c 1 -a localhost",
