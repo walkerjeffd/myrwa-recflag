@@ -62,32 +62,19 @@ export default {
   name: 'new',
   data () {
     return {
-      // form: {
-      //   site: null,
-      //   start: {
-      //     date: '',
-      //     time: ''
-      //   },
-      //   end: {
-      //     date: '',
-      //     time: ''
-      //   },
-      //   type: null,
-      //   description: ''
-      // },
       form: {
-        location_id: 'MYSTIC_ECOLI',
+        location_id: null,
         start: {
-          date: '2017-10-15',
-          time: '00:00'
+          date: '',
+          time: ''
         },
         end: {
-          date: '2017-10-17',
-          time: '12:00'
+          date: '',
+          time: ''
         },
-        type: 'CYANO',
-        level: 'ADVISORY',
-        description: 'Confirmed cyanobacteria bloom'
+        type: null,
+        level: null,
+        description: ''
       },
       types: [
         { value: 'CYANO', text: 'Cyanobacteria'},
