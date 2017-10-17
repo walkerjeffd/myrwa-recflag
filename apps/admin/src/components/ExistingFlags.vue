@@ -20,7 +20,6 @@
           No existing flags. Click <router-link to="/new">Create New Flag</router-link> to make one.
         </p>
         <div v-if="flags.length > 0">
-          <p><em>Note: Click on a column header to sort the table</em></p>
           <b-table striped sortable :items="flags" :fields="fields">
             <template slot="edit" scope="data">
               <b-button variant="primary" :to="{ name: 'edit', params: { id: data.item.id } }">Edit</b-button>
@@ -43,6 +42,24 @@ export default {
       flags: [],
       fields: [
         {
+          key: 'status',
+          label: 'Status',
+          sortable: true,
+          variant: () => {
+            return 'danger';
+          }
+        },
+        {
+          key: 'level',
+          label: 'Level',
+          sortable: true
+        },
+        {
+          key: 'type',
+          label: 'Flag Type',
+          sortable: true
+        },
+        {
           key: 'start',
           label: 'Start',
           sortable: true
@@ -53,34 +70,9 @@ export default {
           sortable: true
         },
         {
-          key: 'site',
-          label: 'Site',
+          key: 'location_shortname',
+          label: 'Location',
           sortable: true,
-          formatter (x) {
-            const sites = {
-              MYSTIC_ECOLI: 'Mystic River (Rt 16)',
-              MALDENLOWER_ECOLI: 'Malden River (Rt 16)',
-              SHANNON_ENT: 'Upper Mystic Lake (Shannon Beach)'
-            }
-            return sites[x];
-          },
-          class: 'rf-table-col'
-        },
-        {
-          key: 'type',
-          label: 'Flag Type',
-          sortable: true,
-          formatter (x) {
-            const types = {
-              CYANO_UNCERTAIN: 'Unconfirmed Cyanobacteria (Uncertain)',
-              CYANO_ADVISORY: 'Confirmed Cyanobacteria (Advisory)',
-              CSO_ADVISORY: 'Combined Sewer Overflow (Advisory)',
-              OTHER_ADVISORY: 'Other (Advisory)',
-              OTHER_UNCERTAIN: 'Other (Uncertain)'
-            }
-            console.log(x);
-            return types[x];
-          },
           class: 'rf-table-col'
         },
         {
@@ -104,10 +96,80 @@ export default {
       this.loading = true;
       setTimeout(() => {
         const flags = [
-          { id: 1, start: '2017-10-15 12:15', end: '2017-10-17 18:25', 'site': 'MYSTIC_ECOLI', 'type': 'CYANO_ADVISORY', 'description': 'Cyanobacteria' },
-          { id: 2, start: '2017-10-16 08:25', end: '2017-10-18 12:00', 'site': 'MALDENLOWER_ECOLI', 'type': 'CYANO_UNCERTAIN', 'description': 'Cyanobacteria unconfirmed and a very long message' },
-          { id: 3, start: '2017-10-17 17:15', end: '2017-10-19 22:50', 'site': 'SHANNON_ENT', 'type': 'CSO_ADVISORY', 'description': 'CSO discharge' }
+          {
+            id: 6,
+            start: '2017-10-17 17:15',
+            end: '2017-10-19 22:50',
+            location_id: 'SHANNON_ENT',
+            location_shortname: 'Shannon Beach',
+            type: 'CSO',
+            level: 'ADVISORY',
+            description: 'CSO discharge',
+            status: 'ACTIVE'
+          },
+          {
+            id: 5,
+            start: '2017-10-16 08:25',
+            end: '2017-10-18 12:00',
+            location_id: 'MALDENLOWER_ECOLI',
+            location_shortname: 'Malden River (Rt 16)',
+            type: 'CYANO',
+            level: 'UNCERTAIN',
+            description: 'Cyanobacteria unconfirmed and a very long message',
+            status: 'ACTIVE'
+          },
+          {
+            id: 4,
+            start: '2017-10-15 12:15',
+            end: '2017-10-15 18:25',
+            location_id: 'MYSTIC_ECOLI',
+            location_shortname: 'Mystic River (Rt 16)',
+            type: 'CYANO',
+            level: 'ADVISORY',
+            description: 'Cyanobacteria',
+            status: 'EXPIRED'
+          },
+          {
+            id: 3,
+            start: '2017-10-10 14:15',
+            end: '2017-10-11 10:25',
+            location_id: 'SHANNON_ENT',
+            location_shortname: 'Shannon Beach',
+            type: 'CYANO',
+            level: 'UNCERTAIN',
+            description: 'Cyanobacteria',
+            status: 'EXPIRED'
+          },
+          {
+            id: 2,
+            start: '2017-10-7 12:15',
+            end: '2017-10-10 18:25',
+            location_id: 'MYSTIC_ECOLI',
+            location_shortname: 'Mystic River (Rt 16)',
+            type: 'CYANO',
+            level: 'ADVISORY',
+            description: 'Cyanobacteria',
+            status: 'EXPIRED'
+          },
+          {
+            id: 1,
+            start: '2017-10-01 07:45',
+            end: '2017-10-05 19:30',
+            location_id: 'MALDENLOWER_ECOLI',
+            location_shortname: 'Malden River (Rt 16)',
+            type: 'CSO',
+            level: 'ADVISORY',
+            description: 'Major CSO Discharge',
+            status: 'EXPIRED'
+          }
         ];
+
+        flags.forEach((d) => {
+          if (d.status == 'ACTIVE') {
+            d._rowVariant = 'danger';
+          }
+        });
+
         this.flags = flags;
         this.loading = false;
       }, 1000);

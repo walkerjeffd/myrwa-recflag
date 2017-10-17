@@ -1,9 +1,10 @@
 <template>
   <div id="app">
-    <b-container>
+    <b-container fluid>
       <b-row>
         <b-col>
-          <h1>MyRWA Recreational Flagging Admin Page</h1>
+          <h1 class="display-4">MyRWA Recreational Flagging Project</h1>
+          <h3 class="text-muted">Manual Advisory Override Control Center</h3>
         </b-col>
       </b-row>
       <hr>
@@ -25,16 +26,7 @@
 
 <script>
 export default {
-  name: 'app',
-  data () {
-    return {
-    }
-  },
-  methods: {
-    clickBtn () {
-      console.log('clicked')
-    }
-  }
+  name: 'app'
 }
 </script>
 
