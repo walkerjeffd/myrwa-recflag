@@ -58,6 +58,21 @@
 </template>
 
 <script>
+import moment from 'moment';
+import auth from '../auth';
+import fixtures from '../fixtures';
+import config from '../../../config';
+
+function convertToOptions(x) {
+  // convert { x: 1, y: 2} -> [{value: 'x', text: 1}, {value: 'y', text: 2}]
+  return Object.keys(x).map((key) => {
+    return {
+      value: key,
+      text: x[key]
+    }
+  });
+}
+
 export default {
   name: 'new',
   data () {
@@ -76,28 +91,41 @@ export default {
         level: null,
         description: ''
       },
-      types: [
-        { value: 'CYANO', text: 'Cyanobacteria'},
-        { value: 'CSO', text: 'Combined Sewer Overflow'},
-        { value: 'OTHER', text: 'Other'}
-      ],
-      levels: [
-        { value: 'UNCERTAIN', text: 'Uncertain'},
-        { value: 'ADVISORY', text: 'Advisory'}
-      ],
-      locations: [
-        { value: 'MYSTIC_ECOLI', text: 'Mystic River (Rt 16)' },
-        { value: 'MALDENLOWER_ECOLI', text: 'Malden River (Rt 16)' },
-        { value: 'SHANNON_ENT', text: 'Upper Mystic Lake (Shannon Beach)' }
-      ]
+      types: convertToOptions(fixtures.types),
+      levels: convertToOptions(fixtures.levels),
+      locations: convertToOptions(fixtures.locations)
     }
   },
   methods: {
     onSubmit(evt) {
       evt.preventDefault();
-      console.log('submitted');
-      console.log(this.form);
-      this.$router.push('/');
+
+      const start_timestamp = moment(`${this.form.start.date} ${this.form.start.time}`).toISOString();
+      const end_timestamp = moment(`${this.form.end.date} ${this.form.end.time}`).toISOString();
+
+      const flag = {
+        location_id: this.form.location_id,
+        start_timestamp: start_timestamp,
+        end_timestamp: end_timestamp,
+        type: this.form.type,
+        level: this.form.level,
+        description: this.form.description
+      };
+
+      this.$http.post(`${config.api.url}/flags`, flag, {
+          headers: auth.getAuthHeader()
+        })
+        .then((response) => {
+          this.$router.push('list');
+        })
+        .catch((response) => {
+          if (response.status === 401) {
+            this.error = 'Invalid login credentials, try logging out and then back in';
+          } else {
+            console.log(response);
+            this.error = `Failed to save flag, see console`;
+          }
+        })
     }
   }
 }

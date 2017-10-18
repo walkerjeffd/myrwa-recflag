@@ -1,8 +1,16 @@
 <template>
   <div>
     <h2>Edit Existing Flag</h2>
-    <p v-if="loading">Loading...</p>
-    <b-row v-if="!loading">
+    <b-row>
+      <b-col>
+        <b-alert :show="error" variant="danger">
+          <h4 class="alert-heading">Error!</h4>
+          <p>{{ error }}</p>
+        </b-alert>
+        <p v-if="loading">Loading...</p>
+      </b-col>
+    </b-row>
+    <b-row v-if="!loading && !error">
       <b-col cols="6">
         <b-form @submit="onSubmit">
           <b-form-group id="labelLocation" label="Location:" label-for="inputLocation">
@@ -50,8 +58,7 @@
             <b-form-input id="inputDescription" type="text" placeholder="Custom message that will appear on website" required v-model="form.description"></b-form-input>
           </b-form-group>
           <b-button type="submit" variant="primary">Submit</b-button>
-          <b-button type="reset" variant="secondary">Reset</b-button>
-          <b-button variant="danger" to="/">Cancel</b-button>
+          <b-button variant="danger" to="/list">Cancel</b-button>
         </b-form>
       </b-col>
     </b-row>
@@ -59,6 +66,10 @@
 </template>
 
 <script>
+import moment from 'moment';
+import auth from '../auth';
+import config from '../../../config';
+
 export default {
   name: 'edit',
   data () {
@@ -95,33 +106,63 @@ export default {
     }
   },
   created () {
-    console.log("Edit:", this.$route.params.id);
-    const flag = {
-      id: 1,
-      start: {
-        date: '2017-10-15',
-        time: '12:15'
-      },
-      end: {
-        date: '2017-10-17',
-        time: '18:25'
-      },
-      location_id: 'MYSTIC_ECOLI',
-      type: 'CYANO',
-      level: 'ADVISORY',
-      description: 'Cyanobacteria bloom!'
-    };
-    setTimeout(() => {
-      this.form = flag;
-      this.loading = false;
-    }, 1000);
+    const id = +this.$route.params.id;
+    this.$http.get(`${config.api.url}/flags/${id}`)
+      .then((response) => {
+        const data = response.data.data;
+
+        const start = moment(data.start_timestamp);
+        data.start = {
+          date: start.format('YYYY-MM-DD'),
+          time: start.format('HH:mm')
+        };
+        const end = moment(data.end_timestamp);
+        data.end = {
+          date: end.format('YYYY-MM-DD'),
+          time: end.format('HH:mm')
+        };
+
+        this.form = data;
+
+        this.loading = false;
+      })
+      .catch((response) => {
+        console.log(response);
+        this.error = `Failed to get flag (id=${this.$route.params.id})`;
+      })
   },
   methods: {
     onSubmit(evt) {
       evt.preventDefault();
-      console.log('submitted');
-      console.log(this.form);
-      this.$router.push('/');
+      const id = +this.$route.params.id;
+
+      const start_timestamp = moment(`${this.form.start.date} ${this.form.start.time}`).toISOString();
+      const end_timestamp = moment(`${this.form.end.date} ${this.form.end.time}`).toISOString();
+
+      const flag = {
+        id: id,
+        location_id: this.form.location_id,
+        start_timestamp: start_timestamp,
+        end_timestamp: end_timestamp,
+        type: this.form.type,
+        level: this.form.level,
+        description: this.form.description
+      };
+
+      this.$http.post(`${config.api.url}/flags/${id}`, flag, {
+          headers: auth.getAuthHeader()
+        })
+        .then((response) => {
+          this.$router.push('/list');
+        })
+        .catch((response) => {
+          if (response.status === 401) {
+            this.error = 'Invalid login credentials, try logging out and then back in';
+          } else {
+            console.log(response);
+            this.error = `Failed to update flag (id=${id}), see console`;
+          }
+        })
     }
   }
 }

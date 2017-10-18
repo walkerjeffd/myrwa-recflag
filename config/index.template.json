@@ -18,5 +18,10 @@
     "consumerSecret": "",
     "accessKey": "",
     "accessSecret": ""
+  },
+  "admin": {
+    "username": "",
+    "password": "",
+    "secret": ""
   }
 }

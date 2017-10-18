@@ -26,5 +26,16 @@ CREATE TABLE predictions (
   prob REAL,
   exceedance BOOLEAN,
   timestamp TIMESTAMP WITH TIME ZONE
-)
+);
 CREATE UNIQUE INDEX predictions_idx_name_timestamp ON predictions (name, timestamp);
+
+CREATE TABLE flags (
+  id SERIAL PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  location_id TEXT NOT NULL,
+  start_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+  type TEXT NOT NULL,
+  level TEXT NOT NULL,
+  description TEXT
+);

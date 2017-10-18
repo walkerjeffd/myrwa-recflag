@@ -4,6 +4,13 @@ module.exports = {
       "import"
   ],
   "rules": {
-    "comma-dangle": "off"
+    "comma-dangle": "off",
+    "no-param-reassign": "off",
+    "no-console": "off"
+  },
+  "globals": {
+    "localStorage": true,
+    "window": true,
+    "console": true
   }
 }

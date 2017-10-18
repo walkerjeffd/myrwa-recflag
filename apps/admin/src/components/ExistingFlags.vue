@@ -7,7 +7,7 @@
     </b-row>
     <b-row>
       <b-col>
-        <b-alert :show="error" variant="danger">
+        <b-alert :show="!!error" variant="danger">
           <h4 class="alert-heading">Error!</h4>
           <p>{{ error }}</p>
         </b-alert>
@@ -20,7 +20,7 @@
           No existing flags. Click <router-link to="/new">Create New Flag</router-link> to make one.
         </p>
         <div v-if="flags.length > 0">
-          <b-table striped sortable :items="flags" :fields="fields">
+          <b-table sortable :items="flags" :fields="fields">
             <template slot="edit" scope="data">
               <b-button variant="primary" :to="{ name: 'edit', params: { id: data.item.id } }">Edit</b-button>
               <b-button variant="danger" @click="deleteFlag(data.item.id)">Delete</b-button>
@@ -33,12 +33,17 @@
 </template>
 
 <script>
+import moment from 'moment';
+import auth from '../auth';
+import fixtures from '../fixtures';
+import config from '../../../config';
+
 export default {
   name: 'existing',
   data () {
     return {
-      loading: false,
-      error: null,
+      loading: true,
+      error: '',
       flags: [],
       fields: [
         {
@@ -60,20 +65,23 @@ export default {
           sortable: true
         },
         {
-          key: 'start',
+          key: 'start_timestamp',
           label: 'Start',
-          sortable: true
+          sortable: true,
+          formatter: t => moment(t).format('MMM D YYYY, h:mm a')
         },
         {
-          key: 'end',
+          key: 'end_timestamp',
           label: 'End',
-          sortable: true
+          sortable: true,
+          formatter: t => moment(t).format('MMM D YYYY, h:mm a')
         },
         {
-          key: 'location_shortname',
+          key: 'location_id',
           label: 'Location',
           sortable: true,
-          class: 'rf-table-col'
+          class: 'rf-table-col',
+          formatter: id => fixtures.locations[id] || 'Unknown'
         },
         {
           key: 'description',
@@ -93,89 +101,42 @@ export default {
   },
   methods: {
     fetchData () {
-      this.loading = true;
-      setTimeout(() => {
-        const flags = [
-          {
-            id: 6,
-            start: '2017-10-17 17:15',
-            end: '2017-10-19 22:50',
-            location_id: 'SHANNON_ENT',
-            location_shortname: 'Shannon Beach',
-            type: 'CSO',
-            level: 'ADVISORY',
-            description: 'CSO discharge',
-            status: 'ACTIVE'
-          },
-          {
-            id: 5,
-            start: '2017-10-16 08:25',
-            end: '2017-10-18 12:00',
-            location_id: 'MALDENLOWER_ECOLI',
-            location_shortname: 'Malden River (Rt 16)',
-            type: 'CYANO',
-            level: 'UNCERTAIN',
-            description: 'Cyanobacteria unconfirmed and a very long message',
-            status: 'ACTIVE'
-          },
-          {
-            id: 4,
-            start: '2017-10-15 12:15',
-            end: '2017-10-15 18:25',
-            location_id: 'MYSTIC_ECOLI',
-            location_shortname: 'Mystic River (Rt 16)',
-            type: 'CYANO',
-            level: 'ADVISORY',
-            description: 'Cyanobacteria',
-            status: 'EXPIRED'
-          },
-          {
-            id: 3,
-            start: '2017-10-10 14:15',
-            end: '2017-10-11 10:25',
-            location_id: 'SHANNON_ENT',
-            location_shortname: 'Shannon Beach',
-            type: 'CYANO',
-            level: 'UNCERTAIN',
-            description: 'Cyanobacteria',
-            status: 'EXPIRED'
-          },
-          {
-            id: 2,
-            start: '2017-10-07 12:15',
-            end: '2017-10-10 18:25',
-            location_id: 'MYSTIC_ECOLI',
-            location_shortname: 'Mystic River (Rt 16)',
-            type: 'CYANO',
-            level: 'ADVISORY',
-            description: 'Cyanobacteria',
-            status: 'EXPIRED'
-          },
-          {
-            id: 1,
-            start: '2017-10-01 07:45',
-            end: '2017-10-05 19:30',
-            location_id: 'MALDENLOWER_ECOLI',
-            location_shortname: 'Malden River (Rt 16)',
-            type: 'CSO',
-            level: 'ADVISORY',
-            description: 'Major CSO Discharge',
-            status: 'EXPIRED'
-          }
-        ];
+      this.$http.get(`${config.api.url}/flags/`)
+        .then((response) => {
+          const flags = response.data.data;
 
-        flags.forEach((d) => {
-          if (d.status == 'ACTIVE') {
-            d._rowVariant = 'danger';
-          }
-        });
+          flags.forEach((d) => {
+            if (d.status == 'ACTIVE') {
+              d._rowVariant = 'danger';
+            } else if (d.status == 'PENDING') {
+              d._rowVariant = 'info';
+            }
+          });
 
-        this.flags = flags;
-        this.loading = false;
-      }, 1000);
+          this.flags = flags;
+          this.loading = false;
+        })
+        .catch((response) => {
+          console.log(response);
+          this.error = 'Failed to get existing flags, see console';
+          this.loading = false;
+        })
     },
     deleteFlag (id) {
-      this.flags = this.flags.filter(d => d.id !== id);
+      this.$http.delete(`${config.api.url}/flags/${id}`, {
+          headers: auth.getAuthHeader()
+        })
+        .then((response) => {
+          this.flags = this.flags.filter(d => d.id !== id);
+        })
+        .catch((response) => {
+          if (response.status === 401) {
+            this.error = 'Invalid login credentials, try logging out and then back in';
+          } else {
+            console.log(response);
+            this.error = `Failed to delete flag (id=${id}), see console`;
+          }
+        })
     }
   }
 }

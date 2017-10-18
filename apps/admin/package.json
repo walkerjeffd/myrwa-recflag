@@ -4,15 +4,16 @@
   "author": "Jeff Walker <jeff@walkerenvres.com>",
   "private": true,
   "scripts": {
-    "watchify": "watchify -vd -t browserify-css -e src/main.js -o dist/build.js",
+    "watchify": "watchify -vd -t browserify-css -e src/index.js -o dist/build.js",
     "serve": "http-server -o -s -c 1 -a localhost ./dist",
     "dev": "npm-run-all --parallel watchify serve",
-    "build": "cross-env NODE_ENV=production browserify -g envify -t browserify-css src/main.js | uglifyjs -c warnings=false -m > dist/build.js"
+    "build": "cross-env NODE_ENV=production browserify -g envify -t browserify-css src/index.js | uglifyjs -c warnings=false -m > dist/build.js"
   },
   "dependencies": {
     "babel-preset-env": "^1.6.1",
     "bootstrap-vue": "^1.0.0-beta.9",
     "browserify-css": "^0.12.0",
+    "moment": "^2.19.1",
     "vue": "^2.0.1",
     "vue-resource": "^1.3.4",
     "vue-router": "^3.0.1"

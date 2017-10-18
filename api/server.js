@@ -1,11 +1,10 @@
-/* eslint no-console: "off" */
-
 const fs = require('fs');
 const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
 
 const config = require('../config');
 const db = require('./db');
@@ -29,7 +28,7 @@ app.use(bodyParser.json());
 const allowCrossDomain = (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   next();
 };
 app.use(allowCrossDomain);
@@ -43,6 +42,26 @@ app.use('/display', express.static('../apps/display'));
 
 // pages
 // app.use('/www/', express.static('./www/'));
+
+
+// middleware
+function getTokenFromRequest(req) {
+  let token;
+  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  return token;
+}
+
+function requireAuth(req, res, next) {
+  const token = getTokenFromRequest(req);
+  jwt.verify(token, config.admin.secret, (err) => {
+    if (err) {
+      return res.status(401).json({ status: 'error', data: { message: 'Invalid or expired token' } });
+    }
+    return next();
+  });
+}
 
 // endpoints
 app.get('/', (req, res) => {
@@ -90,6 +109,66 @@ app.get('/predictions/', (req, res, next) => {
     })
     .then(data => res.status(200).json({ status: 'ok', data }))
     .catch(next);
+});
+
+app.get('/flags', (req, res, next) => {
+  db.getFlags()
+    .then(data => res.status(200).json({ status: 'ok', data }))
+    .catch(next);
+});
+
+app.get('/flags/:id', (req, res, next) => {
+  db.getFlag(+req.params.id)
+    .then(data => res.status(200).json({ status: 'ok', data }))
+    .catch(next);
+});
+
+app.post('/flags', requireAuth, (req, res, next) => {
+  if (!req.body) {
+    res.status(400).json({ status: 'error', error: { message: 'Missing flag data' } });
+  }
+
+  db.createFlag(req.body)
+    .then(data => res.status(201).json({ status: 'ok', data }))
+    .catch(next);
+});
+
+app.post('/flags/:id', requireAuth, (req, res, next) => {
+  if (!req.body) {
+    res.status(400).json({ status: 'error', error: { message: 'Missing flag data' } });
+  }
+
+  db.updateFlag(req.body)
+    .then(data => res.status(201).json({ status: 'ok', data }))
+    .catch(next);
+});
+
+app.delete('/flags/:id', requireAuth, (req, res, next) => {
+  db.deleteFlag(req.params.id)
+    .then(() => res.status(201).json({ status: 'ok', data: {} }))
+    .catch(next);
+});
+
+app.post('/auth/login', (req, res) => {
+  if (!req.body || !req.body.username || !req.body.password) {
+    return res.status(401).json({ status: 'error', error: { message: 'Invalid password' } });
+  }
+
+  const token = jwt.sign({ username: req.body.username }, config.admin.secret, { expiresIn: '1d' });
+  return res.status(200).json({ status: 'ok', data: { access_token: token } });
+});
+
+app.post('/auth/check', (req, res) => {
+  if (!req.body || !req.body.access_token) {
+    return res.status(401).json({ status: 'error', data: { message: 'Missing token' } });
+  }
+
+  jwt.verify(req.body.access_token, config.admin.secret, (err) => {
+    if (err) {
+      return res.status(401).json({ status: 'error', data: { message: 'Invalid or expired token' } });
+    }
+    return res.status(200).json({ status: 'ok', data: { access_token: req.body.access_token } });
+  });
 });
 
 // error handler
