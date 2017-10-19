@@ -19,7 +19,7 @@ module.exports = {
         knex.raw("CASE WHEN end_timestamp < now() THEN 'EXPIRED' WHEN start_timestamp > now() THEN 'PENDING' ELSE 'ACTIVE' END AS status")
       )
       .orderBy('end_timestamp', 'desc')
-      .whereRaw("date_trunc('day', start_timestamp at time zone 'US/Eastern') >= (date_trunc('day', now() at time zone 'US/Eastern') - interval '30 days')");
+      .whereRaw("date_part('year', start_timestamp at time zone 'US/Eastern') = date_part('year', now() at time zone 'US/Eastern')");
   },
   getFlag(id) {
     return knex('flags')
