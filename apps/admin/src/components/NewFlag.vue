@@ -112,7 +112,7 @@ export default {
         description: this.form.description
       };
 
-      this.$http.post(`${config.api.url}/flags`, flag, {
+      this.$http.post(`${config.api.url}/flags/`, flag, {
           headers: auth.getAuthHeader()
         })
         .then((response) => {
