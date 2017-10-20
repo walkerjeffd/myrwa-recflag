@@ -15,13 +15,13 @@
     "type": "git",
     "url": "git+https://github.com/walkerjeffd/myrwa-recflag.git"
   },
-  "private": true,
   "dependencies": {
     "blueimp-tmpl": "^3.11.0",
     "jquery": "^3.2.1",
     "leaflet": "^1.2.0",
     "leaflet-providers": "^1.1.17",
-    "leaflet-sidebar": "^0.2.0"
+    "leaflet-sidebar": "^0.2.0",
+    "purecss": "^1.0.0"
   },
   "devDependencies": {
     "babel-core": "^6.0.0",

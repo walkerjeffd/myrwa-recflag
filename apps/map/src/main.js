@@ -9,6 +9,7 @@ require('leaflet-sidebar');
 
 require('leaflet/dist/leaflet.css');
 require('leaflet-sidebar/src/L.Control.Sidebar.css');
+require('./main.css');
 
 const config = require('../../config');
 
