@@ -71,15 +71,17 @@ app.get('/', (req, res) => {
 app.get('/predictions/', (req, res, next) => {
   db.getPredictions()
     .then((results) => {
-      // randomize exceedances
-      results.forEach((d) => {
-        d.prob = Math.random();
-        d.exceedance = d.prob > 0.45;
-        if (d.prob > 0.9) {
-          d.prob = null;
-          d.exceedance = null;
-        }
-      });
+      if (config.api.randomize) {
+        // randomize exceedances
+        results.forEach((d) => {
+          d.prob = Math.random();
+          d.exceedance = d.prob > 0.45;
+          if (d.prob > 0.9) {
+            d.prob = null;
+            d.exceedance = null;
+          }
+        });
+      }
 
       // add local timestamp string
       results.forEach((d) => {

@@ -11,6 +11,7 @@
   },
   "api": {
     "port": 8000,
+    "randomize": false,
     "logFile": "/path/to/api-access.log"
   },
   "twitter": {
