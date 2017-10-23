@@ -69,11 +69,14 @@ app.get('/', (req, res) => {
 });
 
 app.get('/predictions/', (req, res, next) => {
-  db.getPredictions()
+  Promise.all([db.getPredictions(), db.getFlags()])
     .then((results) => {
+      const predictions = results[0];
+      const flags = results[1];
+
       if (config.api.randomize) {
         // randomize exceedances
-        results.forEach((d) => {
+        predictions.forEach((d) => {
           d.prob = Math.random();
           d.exceedance = d.prob > 0.45;
           if (d.prob > 0.9) {
@@ -84,26 +87,34 @@ app.get('/predictions/', (req, res, next) => {
       }
 
       // add local timestamp string
-      results.forEach((d) => {
+      predictions.forEach((d) => {
         d.timestamp_local = moment.tz(d.timestamp, 'US/Eastern').format('MMM D YYYY H:mm a z');
+        d.flags = flags.filter((flag) => {
+          const start = new Date(flag.start_timestamp);
+          const end = new Date(flag.end_timestamp);
+          const predictionTimestamp = new Date(d.timestamp);
+
+          return flag.location_id === d.name &&
+            start <= predictionTimestamp &&
+            predictionTimestamp <= end;
+        });
+        d.status = utils.assignStatus(d, d.flags);
       });
 
       // create response data
-      const names = _.uniq(results.map(d => d.name));
+      const names = _.uniq(predictions.map(d => d.name));
       const data = names.map((name) => {
         const d = {
           name,
           site: utils.sites[name],
-          current: results.filter(p => p.name === name)[0],
-          history: results.filter(p => p.name === name),
-          flags: []
+          current: predictions.filter(p => p.name === name)[0],
+          history: predictions.filter(p => p.name === name),
+          flags: flags.filter(f => f.location_id === name)
         };
 
         // assign status
-        d.current.status = utils.assignStatus(d.current, d.flags);
-        d.history.forEach((p) => {
-          p.status = utils.assignStatus(p, d.flags);
-        });
+        d.current.status = utils.assignStatus(d.current, d.flags.filter(f => f.status === 'ACTIVE'));
+
         return d;
       });
 

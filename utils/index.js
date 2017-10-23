@@ -1,11 +1,30 @@
 const _ = require('lodash');
 
-function assignStatus(prediction) {
+function assignStatus(prediction, flags) {
   let type = 'unknown';
   let label = 'Not Available';
   let reason = 'Data unavailable or system error';
 
-  if (_.isNull(prediction.exceedance) || _.isUndefined(prediction.exceedance)) {
+  if (flags && flags.length > 0) {
+    const flagsAdvisory = flags.filter(f => f.level === 'ADVISORY');
+    const flagsUncertain = flags.filter(f => f.level === 'UNCERTAIN');
+
+    if (flagsAdvisory.length > 0) {
+      type = 'advisory';
+      label = 'Advisory';
+    } else if (flagsUncertain.length > 0) {
+      type = 'uncertain';
+      label = 'Uncertain';
+    }
+
+    reason = flags.map(d => d.description).join(' ');
+
+    if (prediction.exceedance) {
+      type = 'advisory';
+      label = 'Advisory';
+      reason = `High probability of elevated bacteria levels. ${reason}`;
+    }
+  } else if (_.isNull(prediction.exceedance) || _.isUndefined(prediction.exceedance)) {
     type = 'unknown';
     label = 'Not Available';
     reason = 'Data unavailable or system error.';
@@ -13,7 +32,7 @@ function assignStatus(prediction) {
     type = 'advisory';
     label = 'Advisory';
     reason = 'High probability of elevated bacteria levels.';
-  } else {
+  } else if (!flags || flags.length === 0) {
     type = 'good';
     label = 'Good';
     reason = 'Low probability of elevated bacteria levels.';
