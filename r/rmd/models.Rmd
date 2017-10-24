@@ -68,23 +68,23 @@ Each model can be evaluated by various metrics. Descriptions and interpretation 
 - **ROC AUC**: Area under the Receiving Operator Curve (ROC). A value of 0.5 indicates a useless model. Values greater than 0.9 are considered "excellent".
 - **Sensitivity**: True positive rate (# True Positive / # True Positive + # False Negative). In other words, how many of the true positive (exceedance) samples were correctly identified. 
 - **Specificity**: True negative rate (# True Negative / # True Negative + # False Positive). How many of true negatives (non-exceedances) were correctly identified. Because of the class imbalance, this number is always high (it's easy to predict non-exceedance).
-- **Precision**: Positive predictive value (# True Positive / # True Positive + # False Positive). The percent of predicted positive samples (exceedances) that were in fact positive.
-- **Recall**: Negative predictive value (# True Negative / # True Negative + # False Negative). The percent of predicted negative samples (non-exceedances) that were in fact negative. 
+- **Positive Predictive Value (PPV)**: The percent of predicted positive samples (exceedances) that were in fact positive (# True Positive / # True Positive + # False Positive). Also known as the precision.
+- **Negative Predictive Value (NPV)**: The percent of predicted negative samples (non-exceedances) that were in fact negative (# True Negative / # True Negative + # False Negative). 
 
-Note that because of the datasets have high class imbalance (exceedances are much less common than non-exceedances), the most informative metrics are Kappa, ROC AUC, Precision and Recall. However, following the guidance by Fancy et al (2013), model acceptance was based on the following goals:
+Following the guidance by [Francy et al (2013)](https://pubs.usgs.gov/sir/2013/5166/pdf/sir2013-5166.pdf), model acceptance was based on the following goals:
 
 - **Accuracy > 0.80**
 - **Sensitivity > 0.5**
 - **Specificity > 0.85**
 
-The following table summarizes the performance of each model on the **training** datasets.All three models meet each of these criteria.
+The following table summarizes the performance of each model on the **training** datasets. All three models meet each of these criteria.
 
 ```{r}
 df_models %>% 
   arrange(model_id) %>% 
-  select(model_id, n_sample_train, freq_exceedance_train, nulldev, dev, accuracy_null_train, accuracy_train, kappa_train, roc_train, sensitivity_train, specificity_train, precision_train, recall_train) %>% 
+  select(model_id, n_sample_train, freq_exceedance_train, nulldev, dev, accuracy_null_train, accuracy_train, kappa_train, roc_train, sensitivity_train, specificity_train, ppv_train, npv_train) %>% 
   mutate(freq_exceedance_train = freq_exceedance_train * 100) %>% 
-  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "Null Deviance", "Model Deviance", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Precision", "Recall"), digits = 2)
+  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "Null Deviance", "Model Deviance", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Pos Pred Value", "Neg Pred Value"), digits = 2)
 ```
 
 This table shows the same metrics based on the **testing** subset for each model (excludes deviance metrics that are not relevant for the testing subset). The Mystic and Malden models continue to meet the criteria. The Shannon Beach model, however, has relatively poor performance. However, the overall frequency of exceedances is much lower at this site relative to the others. The training dataset only included 3 exceedances (out of 77 samples total), so these relatively low performance metrics are to be expected. 
@@ -92,9 +92,9 @@ This table shows the same metrics based on the **testing** subset for each model
 ```{r}
 df_models %>% 
   arrange(model_id) %>% 
-  select(model_id, n_sample_test, freq_exceedance_test, accuracy_null_test, accuracy_test, kappa_test, roc_test, sensitivity_test, specificity_test, precision_test, recall_test) %>% 
+  select(model_id, n_sample_test, freq_exceedance_test, accuracy_null_test, accuracy_test, kappa_test, roc_test, sensitivity_test, specificity_test, ppv_test, npv_test) %>% 
   mutate(freq_exceedance_test = freq_exceedance_test * 100) %>% 
-  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Precision", "Recall"), digits = 2)
+  knitr::kable(col.names = c("Model ID", "# Samples", "% Exceedances", "No Information Rate", "Accuracy", "Kappa", "ROC AUC", "Sensitivity", "Specificity", "Pos Pred Value", "Neg Pred Value"), digits = 2)
 ```
 
 # Mystic River at Rt 16 Bridge (E. coli)
@@ -290,6 +290,7 @@ p2 <- cutoffs_test %>%
   theme(aspect.ratio = 1)
 grid.arrange(p1, p2, ncol = 2)
 ```
+
 
 ## Confusion Matrix
 

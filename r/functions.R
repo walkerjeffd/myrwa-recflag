@@ -97,17 +97,22 @@ cutoff_df <- function (m, df) {
 
         tcs_dist <- dist(coords)[1]
 
+        x_cfm <- cfm(m, df, prob = cutoff)
+
         data_frame(
           roc = tcs["ROC"],
           sens = tcs["Sens"],
           spec = tcs["Spec"],
           dist = tcs_dist,
+          prec = x_cfm$byClass["Precision"],
+          recall = x_cfm$byClass["Recall"],
           acc = sum(x$pred == x$obs) / nrow(x)
         )
       })
     ) %>%
     unnest(tcs)
 }
+
 
 cfm <- function (m, df, prob, mode = "sens_spec") {
   # cat(nrow(df), prob, "\n")

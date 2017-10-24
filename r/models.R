@@ -930,8 +930,8 @@ df_final <- data_frame(
         accuracy_pval_train = x$overall['AccuracyPValue'],
         sensitivity_train = x$byClass['Sensitivity'],
         specificity_train = x$byClass['Specificity'],
-        precision_train =  x$byClass['Precision'],
-        recall_train =  x$byClass['Recall']
+        ppv_train =  x$byClass['Pos Pred Value'],
+        npv_train =  x$byClass['Neg Pred Value']
       )
     }),
     cfm_test_df = map(cfm_test, function (x) {
@@ -942,8 +942,8 @@ df_final <- data_frame(
         accuracy_pval_test = x$overall['AccuracyPValue'],
         sensitivity_test = x$byClass['Sensitivity'],
         specificity_test = x$byClass['Specificity'],
-        precision_test =  x$byClass['Precision'],
-        recall_test =  x$byClass['Recall']
+        ppv_test =  x$byClass['Pos Pred Value'],
+        npv_test =  x$byClass['Neg Pred Value']
       )
     })
   ) %>%
