@@ -1,10 +1,14 @@
 ---
-title: "Recreational Flagging - Model Development"
-author: "Jeffrey D Walker, PhD"
+title: "Mystic Recreational Flagging Project - Model Development"
+author: "[Jeffrey D Walker, PhD](https://walkerenvres.com)"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document: 
+    number_sections: yes
     toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
 ---
 
 ```{r setup, include=FALSE}
