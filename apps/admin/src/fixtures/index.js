@@ -1,12 +1,14 @@
 module.exports = {
   types: {
+    OFFLINE: 'Offline',
     CYANO: 'Cyanobacteria',
     CSO: 'Combined Sewer Overflow',
     OTHER: 'Other'
   },
   levels: {
     UNCERTAIN: 'Uncertain',
-    ADVISORY: 'Advisory'
+    ADVISORY: 'Advisory',
+    OFFLINE: 'Offline'
   },
   locations: {
     MYSTIC_ECOLI: 'Mystic River (Rt 16)',

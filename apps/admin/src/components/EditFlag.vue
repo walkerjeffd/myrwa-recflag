@@ -68,7 +68,18 @@
 <script>
 import moment from 'moment';
 import auth from '../auth';
+import fixtures from '../fixtures';
 import config from '../../../config';
+
+function convertToOptions(x) {
+  // convert { x: 1, y: 2} -> [{value: 'x', text: 1}, {value: 'y', text: 2}]
+  return Object.keys(x).map((key) => {
+    return {
+      value: key,
+      text: x[key]
+    }
+  });
+}
 
 export default {
   name: 'edit',
@@ -89,20 +100,9 @@ export default {
         level: null,
         description: ''
       },
-      types: [
-        { value: 'CYANO', text: 'Cyanobacteria'},
-        { value: 'CSO', text: 'Combined Sewer Overflow'},
-        { value: 'OTHER', text: 'Other'}
-      ],
-      levels: [
-        { value: 'UNCERTAIN', text: 'Uncertain'},
-        { value: 'ADVISORY', text: 'Advisory'}
-      ],
-      locations: [
-        { value: 'MYSTIC_ECOLI', text: 'Mystic River (Rt 16)' },
-        { value: 'MALDENLOWER_ECOLI', text: 'Malden River (Rt 16)' },
-        { value: 'SHANNON_ENT', text: 'Upper Mystic Lake (Shannon Beach)' }
-      ]
+      types: convertToOptions(fixtures.types),
+      levels: convertToOptions(fixtures.levels),
+      locations: convertToOptions(fixtures.locations)
     }
   },
   created () {
