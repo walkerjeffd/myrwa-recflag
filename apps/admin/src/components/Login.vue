@@ -23,11 +23,6 @@
         </b-alert>
       </b-col>
     </b-row>
-    <b-row class="mt-4">
-      <b-col>
-        <p><em>For testing, password: myrwa</em></p>
-      </b-col>
-    </b-row>
   </div>
 </template>
 

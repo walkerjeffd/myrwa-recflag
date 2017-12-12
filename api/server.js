@@ -165,7 +165,12 @@ app.delete('/flags/:id', requireAuth, (req, res, next) => {
 
 app.post('/auth/login', (req, res) => {
   if (!req.body || !req.body.username || !req.body.password) {
-    return res.status(401).json({ status: 'error', error: { message: 'Invalid password' } });
+    return res.status(401).json({ status: 'error', error: { message: 'Missing username and/or password' } });
+  }
+
+  if (!(req.body.username === config.admin.username &&
+        req.body.password === config.admin.password)) {
+    return res.status(401).json({ status: 'error', error: { message: 'Invalid username or password' } });
   }
 
   const token = jwt.sign({ username: req.body.username }, config.admin.secret, { expiresIn: '1d' });
