@@ -11,4 +11,5 @@ r/.Rhistory
 r/data
 r/*.rds
 !r/models.rds
+r/pdf/*.pdf
 .Rproj.user
