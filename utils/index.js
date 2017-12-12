@@ -6,6 +6,7 @@ function assignStatus(prediction, flags) {
   let reason = 'Data unavailable or system error';
 
   if (flags && flags.length > 0) {
+    const flagsOffline = flags.filter(f => f.level === 'OFFLINE');
     const flagsAdvisory = flags.filter(f => f.level === 'ADVISORY');
     const flagsUncertain = flags.filter(f => f.level === 'UNCERTAIN');
 
@@ -19,7 +20,7 @@ function assignStatus(prediction, flags) {
 
     reason = flags.map(d => d.description).join(' ');
 
-    if (prediction.exceedance) {
+    if (prediction.exceedance && flagsOffline.length === 0) {
       type = 'advisory';
       label = 'Advisory';
       reason = `High probability of elevated bacteria levels. ${reason}`;
