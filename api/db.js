@@ -8,7 +8,7 @@ const knex = require('knex')({
 module.exports = {
   getPredictions() {
     return knex('predictions')
-      .select()
+      .select('*', knex.raw('to_char(date_trunc(\'day\', timestamp at time zone \'US/Eastern\'), \'Mon DD YYYY\') as day_label'))
       .orderBy('timestamp', 'desc')
       .whereRaw("date_trunc('day', timestamp at time zone 'US/Eastern') >= (date_trunc('day', now() at time zone 'US/Eastern') - interval '6 days')");
   },

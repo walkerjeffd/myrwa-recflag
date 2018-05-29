@@ -33,14 +33,14 @@ const sidebarTemplate = `
 <table class="pure-table">
   <thead>
     <tr>
-      <th>Date/Time</th>
+      <th>Date</th>
       <th>Status</th>
     </tr>
   </thead>
   <tbody>
     {% for (var i=0; i<o.history.length; i++) { %}
       <tr>
-      <td>{%=o.history[i].timestamp_local%}</td>
+      <td>{%=o.history[i].day_label%}</td>
       <td class="recflag-status-{%=o.history[i].status.type%}">{%=o.history[i].status.label%}</td>
     </tr>
     {% } %}
@@ -102,7 +102,6 @@ window.onload = () => {
   // fetch data
   $.get(config.api.url + 'predictions/', (response) => {
     const data = response.data;
-    console.log(data);
 
     // for each site
     data.forEach((d) => {
@@ -130,7 +129,6 @@ window.onload = () => {
       }).addTo(map)
         .on('mousedown', () => {
           // workaround for non-firing "click" events
-          console.log('clicked: ', d.name);
           if (sidebar.isVisible()) {
             sidebar.hide();
           }
@@ -142,72 +140,73 @@ window.onload = () => {
         });
     });
   })
-  .fail(() => {
-    // unable to get data from server
-    const data = [
-      {
-        name: 'MYSTIC_ECOLI',
-        site: {
-          name: 'Mystic River',
-          description: 'Mystic Valley Parkway (Rt 16)',
-          latitude: 42.405722,
-          longitude: -71.096351
+    .fail((err) => {
+      console.log(err);
+      // unable to get data from server
+      const data = [
+        {
+          name: 'MYSTIC_ECOLI',
+          site: {
+            name: 'Mystic River',
+            description: 'Mystic Valley Parkway (Rt 16)',
+            latitude: 42.405722,
+            longitude: -71.096351
+          },
+          current: {
+            timestamp_local: 'Not Available',
+            status: {
+              type: 'unknown',
+              label: 'Not Available',
+              reason: 'Unable to get data from the server.'
+            }
+          },
+          history: []
         },
-        current: {
-          timestamp_local: 'Not Available',
-          status: {
-            type: 'unknown',
-            label: 'Not Available',
-            reason: 'Unable to get data from the server.'
-          }
+        {
+          name: 'MALDENLOWER_ECOLI',
+          site: {
+            name: 'Malden River',
+            description: 'Revere Beach Parkway (Rt 16)',
+            latitude: 42.4053,
+            longitude: -71.07191
+          },
+          current: {
+            timestamp_local: 'Not Available',
+            status: {
+              type: 'unknown',
+              label: 'Not Available',
+              reason: 'Unable to get data from the server.'
+            }
+          },
+          history: []
         },
-        history: []
-      },
-      {
-        name: 'MALDENLOWER_ECOLI',
-        site: {
-          name: 'Malden River',
-          description: 'Revere Beach Parkway (Rt 16)',
-          latitude: 42.4053,
-          longitude: -71.07191
-        },
-        current: {
-          timestamp_local: 'Not Available',
-          status: {
-            type: 'unknown',
-            label: 'Not Available',
-            reason: 'Unable to get data from the server.'
-          }
-        },
-        history: []
-      },
-      {
-        name: 'SHANNON_ENT',
-        site: {
-          name: 'Upper Mystic Lake',
-          description: 'Shannon Beach',
-          latitude: 42.439892,
-          longitude: -71.146153
-        },
-        current: {
-          timestamp_local: 'Not Available',
-          status: {
-            type: 'unknown',
-            label: 'Not Available',
-            reason: 'Unable to get data from the server.'
-          }
-        },
-        history: []
-      }
-    ];
+        {
+          name: 'SHANNON_ENT',
+          site: {
+            name: 'Upper Mystic Lake',
+            description: 'Shannon Beach',
+            latitude: 42.439892,
+            longitude: -71.146153
+          },
+          current: {
+            timestamp_local: 'Not Available',
+            status: {
+              type: 'unknown',
+              label: 'Not Available',
+              reason: 'Unable to get data from the server.'
+            }
+          },
+          history: []
+        }
+      ];
 
-    data.forEach((d) => {
-      // update cards
-      $(`#recflag-card-${d.name}`).html(tmpl(cardTemplate, d));
+      data.forEach((d) => {
+        // update cards
+        $(`#recflag-card-${d.name}`).html(tmpl(cardTemplate, d));
+      });
+
+      setTimeout(() => {
+        alert('System error occurred. Unable to retrieve current data. Please contact us at contact@mysticriver.org if the problem persists.');
+      }, 500);
     });
-
-    setTimeout(() => {
-      alert('System error occurred. Unable to retrieve current data. Please contact us at contact@mysticriver.org if the problem persists.');
-    }, 500);
-  });
 };
