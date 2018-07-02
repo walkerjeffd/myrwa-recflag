@@ -205,7 +205,10 @@ wunderground_fetch <- function(con, start, end) {
   df_unnest <- df_raw %>%
     mutate(
       data = map(data, function(x) {
+
         json <- fromJSON(x, simplifyDataFrame = TRUE)
+
+        if (length(json) == 0) return(data_frame())
 
         utc_timestamp <- json$utcdate %>%
           mutate(
