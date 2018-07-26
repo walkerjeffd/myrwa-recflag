@@ -56,7 +56,7 @@ query
       text += '\n';
     });
 
-    text += '\nMore Info: https://mysticriver.org/recreationadvisory';
+    text += '\nMore Info: https://mysticriver.org/boatingadvisory';
 
     return text;
   })
