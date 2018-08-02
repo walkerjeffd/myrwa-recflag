@@ -1,7 +1,7 @@
 ---
-title: "Mystic Recreational Flagging Project - Model Development"
-author: "[Jeffrey D Walker, PhD](https://walkerenvres.com)"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+title: "Development of Real-time Bacteria Exceedance Models for the Mystic River Recreational Flagging Project"
+author: "Jeffrey D Walker, PhD ([Walker Environmental Research LLC](https://walkerenvres.com))"
+date: "October 24, 2017"
 output: 
   html_document: 
     number_sections: yes
