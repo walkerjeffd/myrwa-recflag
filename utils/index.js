@@ -20,7 +20,7 @@ function assignStatus(prediction, flags) {
 
     reason = flags.map(d => d.description).join(' ');
 
-    if (prediction.exceedance && flagsOffline.length === 0) {
+    if (prediction && prediction.exceedance && flagsOffline.length === 0) {
       type = 'advisory';
       label = 'Advisory';
       reason = `High probability of elevated bacteria levels. ${reason}`;

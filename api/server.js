@@ -103,18 +103,25 @@ app.get('/predictions/', (req, res, next) => {
       });
 
       // create response data
-      const names = _.uniq(predictions.map(d => d.name));
+      // const names = _.uniq(predictions.map(d => d.name));
+      const names = Object.keys(utils.sites);
       const data = names.map((name) => {
         const d = {
           name,
           site: utils.sites[name],
-          current: predictions.filter(p => p.name === name)[0],
+          current: predictions.find(p => p.name === name),
           history: predictions.filter(p => p.name === name),
           flags: flags.filter(f => f.location_id === name)
         };
 
         // assign status
-        d.current.status = utils.assignStatus(d.current, d.flags.filter(f => f.status === 'ACTIVE'));
+        if (d.current) {
+          d.current.status = utils.assignStatus(d.current, d.flags.filter(f => f.status === 'ACTIVE'));
+        } else {
+          d.current = {
+            status: utils.assignStatus(d.current, d.flags.filter(f => f.status === 'ACTIVE'))
+          }
+        }
 
         return d;
       });
