@@ -19,6 +19,7 @@ suppressPackageStartupMessages(library(jsonlite))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(zoo))
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(tsibble))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(gridExtra))
 suppressPackageStartupMessages(library(RPostgreSQL))
@@ -114,7 +115,7 @@ for (i in seq_along(target_timestamps)) {
     stopifnot(nrow(x) == 1)
     x <- as.list(x)
 
-    x_predictors <- df_predictors_target[, c("timestamp", x$model[[1]]$finalModel$xNames)]
+    x_predictors <- as_tibble(df_predictors_target)[, c("timestamp", x$model[[1]]$finalModel$xNames)]
     pred_prob <- make_prediction(x$model[[1]], newdata = x_predictors)
     pred_exceedance <- pred_prob > x$cutoff
 

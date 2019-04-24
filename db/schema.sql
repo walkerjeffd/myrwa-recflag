@@ -17,6 +17,14 @@ CREATE TABLE wunderground (
 );
 CREATE UNIQUE INDEX wunderground_idx_date ON wunderground (date);
 
+CREATE TABLE metar (
+  id SERIAL PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  date DATE,
+  json JSON
+);
+CREATE UNIQUE INDEX metar_idx_date ON metar (date);
+
 CREATE TABLE predictions (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),

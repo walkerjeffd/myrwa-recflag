@@ -3,11 +3,12 @@ const program = require('commander');
 const moment = require('moment-timezone');
 const fetchStreamflow = require('./streamflow').fetch;
 const fetchWunderground = require('./wunderground').fetch;
+const fetchMetar = require('./metar').fetch;
 
 const startTime = new Date();
 
 program
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('streamflow <stationId>')
@@ -60,6 +61,35 @@ program
   });
 
 program
+  .command('metar')
+  .description('Fetch one day of metar data from Aviation Weather Service and save to database')
+  .option('-D, --date [YYYY-MM-DD]', 'Date to fetch')
+  .option('-Y, --yesterday', 'Yesterday')
+  .option('-T, --today', 'Today')
+  .action((command) => {
+    logger.info('fetching metar');
+
+    let date = command.date;
+    if (command.yesterday) {
+      date = moment.tz(new Date(), 'US/Eastern').subtract(1, 'day').format('YYYY-MM-DD');
+    }
+    if (command.today) {
+      date = moment.tz(new Date(), 'US/Eastern').format('YYYY-MM-DD');
+    }
+
+    fetchMetar({ date })
+      .then(() => {
+        const endTime = new Date();
+        logger.info('done (duration = %d sec)', (endTime - startTime) / 1000);
+        process.exit(0);
+      })
+      .catch((error) => {
+        logger.error(error.toString());
+        process.exit(1);
+      });
+  });
+
+program
   .command('wunderground-batch')
   .description('Fetch daily weather data from Wunderground API in batch mode and save to database')
   .option('-S, --start [YYYY-MM-DD]', 'Start date')
@@ -97,5 +127,43 @@ program
     run(dateArray.length - 1);
   });
 
+
+program
+  .command('metar-batch')
+  .description('Fetch daily weather data from Aviation Weather Service in batch mode and save to database')
+  .option('-S, --start [YYYY-MM-DD]', 'Start date')
+  .option('-E, --end [YYYY-MM-DD]', 'End date')
+  .option('-D, --delay [seconds]', 'Delay between requests in seconds')
+  .action((command) => {
+    logger.info('fetching metar-batch');
+
+    const range = moment.range(command.start, command.end);
+    const dateArray = Array.from(range.by('day')).map(d => d.format('YYYY-MM-DD'));
+    const delay = command.delay * 1000;
+
+    function run(i) {
+      if (i < 0) {
+        process.exit(0);
+      }
+
+      const date = dateArray[i];
+
+      logger.info(`fetching "${date}"`);
+      fetchMetar({ date })
+        .then(() => {
+          logger.info(`done "${date}", waiting ${delay} ms`);
+          setTimeout(() => {
+            run(i - 1);
+          }, delay);
+        })
+        .catch((err) => {
+          logger.error(`error occurred for "${date}"`);
+          logger.error(err);
+          process.exit(1);
+        });
+    }
+
+    run(dateArray.length - 1);
+  });
 
 program.parse(process.argv);
