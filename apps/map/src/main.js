@@ -80,8 +80,8 @@ window.onload = () => {
   // set up map
   const map = L.map('recflag-map').setView([42.42624, -71.09630], 12);
 
-  L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   // L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
 
