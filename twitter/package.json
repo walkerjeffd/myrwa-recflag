@@ -5,7 +5,7 @@
   "main": "tweet.js",
   "dependencies": {
     "knex": "^0.13.0",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.19",
     "pg": "^7.3.0",
     "twitter": "^1.7.1"
   },
