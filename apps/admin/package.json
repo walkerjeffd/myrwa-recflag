@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "babel-preset-env": "^1.6.1",
-    "bootstrap-vue": "^1.0.0-beta.9",
+    "bootstrap-vue": "^2.0.0-rc.12",
     "browserify-css": "^0.12.0",
     "moment": "^2.19.1",
     "vue": "^2.0.1",
