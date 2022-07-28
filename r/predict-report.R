@@ -135,7 +135,7 @@ for (site in unique(df_predict$name)) {
     ) +
     scale_fill_manual(NULL, values = "goldenrod") +
     geom_line() +
-    facet_wrap(vars(key), scales = "free_y", ncol = 1) +
+    facet_wrap(~ key, scales = "free_y", ncol = 1) +
     labs(
       title = paste0(site, " | Period of Record"),
       y = NULL, x = "Date",
@@ -176,7 +176,7 @@ for (site in unique(df_predict$name)) {
     ) +
     scale_fill_manual(NULL, values = "goldenrod") +
     geom_line() +
-    facet_wrap(vars(key), scales = "free_y", ncol = 1) +
+    facet_wrap(~ key, scales = "free_y", ncol = 1) +
     labs(
       title = paste0(site, " | Last 365 Days"),
       y = NULL, x = "Date",
@@ -204,7 +204,7 @@ for (site in unique(df_predict$name)) {
     scale_fill_manual(NULL, values = "goldenrod") +
     scale_linetype_manual(NULL, values = "dashed") +
     scale_y_continuous(limits = c(0, 1), labels = scales::percent, breaks = scales::pretty_breaks()) +
-    facet_wrap(vars(key), scales = "free_x", strip.position = "bottom") +
+    facet_wrap(~ key, scales = "free_x", strip.position = "bottom") +
     labs(
       title = paste0(site, " | Predicted Prob vs. Input Variable Values"),
       y = "Predicted Exceedence Probability", x = NULL,
