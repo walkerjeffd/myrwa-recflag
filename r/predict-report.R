@@ -64,11 +64,15 @@ df_predict <- bind_rows(
   df_prob,
   df_predictors
 ) %>%
-  mutate(key = fct_inorder(key))
+  mutate(key = factor(key, levels = unique(key)))
 
-# model data --------------------------------------------------------------
+# models ----
+
+cat("models1\n")
 
 df_models <- load_models("models.rds")
+
+cat("models2\n")
 
 df_models_train <- df_models %>%
   select(df_train) %>%
