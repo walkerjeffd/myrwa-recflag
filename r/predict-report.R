@@ -66,13 +66,10 @@ df_predict <- bind_rows(
 ) %>%
   mutate(key = factor(key, levels = unique(key)))
 
-# models ----
 
-cat("models1\n")
+# models ------------------------------------------------------------------
 
 df_models <- load_models("models.rds")
-
-cat("models2\n")
 
 df_models_train <- df_models %>%
   select(df_train) %>%
@@ -81,25 +78,25 @@ df_models_train <- df_models %>%
 df_models_names <- df_models %>%
   select(model_id, model) %>%
   mutate(
-    predictor_names = map(model, ~ .x$finalModel$xNames)
+    predictor_names = map(model, function (x) {
+      tibble(key = x$finalModel$xNames)
+    })
   ) %>%
-  select(-model)
+  select(-model) %>%
+  unnest(predictor_names)
 
 df_models_predictor_ranges <- df_models_train %>%
   gather("key", "value", temp:alewife_logflow_p5d) %>%
-  nest_by(model_id) %>%
-  left_join(df_models_names, by = "model_id") %>%
-  mutate(
-    data = list(filter(data, key %in% predictor_names)),
-    predictor_ranges = list({
-      data %>%
-        group_by(key) %>%
-        summarise(min = min(value), median = median(value), mean = mean(value), max = max(value))
-    })
+  inner_join(df_models_names, by = c("model_id", "key")) %>%
+  group_by(model_id, key) %>%
+  summarise(
+    min = min(value),
+    median = median(value),
+    mean = mean(value),
+    max = max(value)
   ) %>%
-  select(model_id, predictor_ranges) %>%
-  unnest(predictor_ranges) %>%
   ungroup()
+
 
 # pdf ---------------------------------------------------------------------
 
