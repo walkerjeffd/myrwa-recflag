@@ -190,8 +190,8 @@ for (site in unique(df_predict$name)) {
   x <- df_predict %>%
     filter(name == site)
   p <- x %>%
-    pivot_wider(names_from = "key") %>%
-    pivot_longer(-c("name", "timestamp", "exceedence_probability"), names_to = "key") %>%
+    spread("key", "value") %>%
+    gather(key, value, -name, -timestamp, -exceedence_probability) %>%
     ggplot(aes(value, exceedence_probability)) +
     geom_rect(
       data = df_models_predictor_ranges %>%
