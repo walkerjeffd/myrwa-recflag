@@ -110,7 +110,6 @@ p <- df_predict %>%
   ggplot(aes(timestamp, value)) +
   geom_line() +
   geom_hline(aes(yintercept = 0.2, linetype = "Cutoff")) +
-  scale_x_datetime(expand = expansion()) +
   scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
   scale_linetype_manual("", values = "dashed") +
   facet_wrap(~ name, ncol = 1) +
@@ -137,7 +136,6 @@ for (site in unique(df_predict$name)) {
     scale_fill_manual(NULL, values = "goldenrod") +
     geom_line() +
     facet_wrap(vars(key), scales = "free_y", ncol = 1) +
-    scale_x_datetime(expand = expansion()) +
     labs(
       title = paste0(site, " | Period of Record"),
       y = NULL, x = "Date",
@@ -152,7 +150,6 @@ p <- df_predict %>%
   ggplot(aes(timestamp, value)) +
   geom_line() +
   geom_hline(aes(yintercept = 0.2, linetype = "Cutoff")) +
-  scale_x_datetime(expand = expansion()) +
   scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
   scale_linetype_manual("", values = "dashed") +
   facet_wrap(~ name, ncol = 1) +
@@ -180,7 +177,6 @@ for (site in unique(df_predict$name)) {
     scale_fill_manual(NULL, values = "goldenrod") +
     geom_line() +
     facet_wrap(vars(key), scales = "free_y", ncol = 1) +
-    scale_x_datetime(expand = expansion()) +
     labs(
       title = paste0(site, " | Last 365 Days"),
       y = NULL, x = "Date",
