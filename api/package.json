@@ -13,7 +13,7 @@
     "jsonwebtoken": "^8.1.0",
     "knex": "^0.13.0",
     "lodash.uniq": "^4.5.0",
-    "moment-timezone": "^0.5.13",
+    "moment-timezone": "^0.5.35",
     "morgan": "^1.8.1",
     "pg": "^7.3.0"
   },
