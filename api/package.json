@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "body-parser": "^1.17.1",
-    "express": "^4.15.2",
+    "express": "^4.17.3",
     "jsonwebtoken": "^8.1.0",
     "knex": "^0.13.0",
     "lodash.uniq": "^4.5.0",
