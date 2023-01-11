@@ -11,7 +11,7 @@
     "body-parser": "^1.17.1",
     "express": "^4.15.2",
     "jsonwebtoken": "^8.1.0",
-    "knex": "^0.13.0",
+    "knex": "^2.4.0",
     "lodash.uniq": "^4.5.0",
     "moment-timezone": "^0.5.13",
     "morgan": "^1.8.1",
